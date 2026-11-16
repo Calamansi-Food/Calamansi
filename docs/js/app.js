@@ -21,7 +21,7 @@ import * as TU from './today-ui.js';
 import { checkBackup, describeCounts } from './backup-check.js';
 import { h, toast, keyOf, fromKey, addDays, startOfDay, fmtDate, pad2, DAY_NAMES, MONTHS, uid } from './util.js';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 const CITRUS_URL = 'https://amaerys.github.io/citrus-maxima/';
 const MANDARIN_URL = 'https://mandarin-work.github.io/Mandarin/';
 
@@ -173,7 +173,7 @@ function go(view, part) {
   if (view === 'life' && part) LU.lifePart(part);
   show(view);
 }
-function show(view) {
+function show(view) { document.documentElement.dataset.view = OLD[view] || view;
   view = OLD[view] || view;
   if (!VIEWS.includes(view)) view = 'today';
   rt.view = view;
@@ -204,7 +204,7 @@ function crashCard(e) {
 
 // Interfaces (Orange 8.12 pattern): Arcade / Clean / Paper + text size, chosen per device (localStorage, never synced); index.html applies them before first paint.
 const UI_KEY = 'calamansi.ui';
-function getUi() { let u = {}; try { u = JSON.parse(localStorage.getItem(UI_KEY) || '{}') || {}; } catch {} if (!u.ui) u.ui = S().settings.theme === 'light' ? 'paper' : 'clean'; if (!u.size) u.size = 'normal'; return u; }
+function getUi() { let u = {}; try { u = JSON.parse(localStorage.getItem(UI_KEY) || '{}') || {}; } catch {} if (!u.ui) u.ui = 'paper'; /* 1.1: bright unless you pick Clean or Arcade */ if (!u.size) u.size = 'normal'; return u; }
 function setUi(patch) { const u = { ...getUi(), ...patch }; try { localStorage.setItem(UI_KEY, JSON.stringify(u)); } catch {} applyTheme(); render(); if (rt.view === 'more') document.querySelector('#view-more .ui-pick')?.scrollIntoView({ block: 'nearest' }); }
 function applyTheme() { const u = getUi(), r = document.documentElement; r.dataset.ui = u.ui; r.dataset.size = u.size; r.dataset.theme = u.ui === 'paper' ? 'light' : 'dark'; const m = document.querySelector('meta[name=theme-color]'); if (m) m.content = u.ui === 'paper' ? '#F3F4F9' : u.ui === 'arcade' ? '#12141F' : '#0e0f13'; }
 
@@ -598,7 +598,7 @@ function customiseCard() {
 }
 function uiPicker() {
   const u = getUi(), opt = (id, name, note) => h('button', { class: `ui-opt ${u.ui === id ? 'sel' : ''}`, 'aria-pressed': u.ui === id ? 'true' : 'false', onClick: () => setUi({ ui: id }) }, h('span', { class: `ui-thumb ui-${id}` }, h('i'), h('i'), h('b', {}, 'Aa')), h('b', {}, name), h('small', {}, note));
-  return h('div', { class: 'ui-pick' }, h('div', { class: 'title' }, 'Interface on this device'), h('div', { class: 'ui-opts' }, opt('arcade', 'Arcade', '8-bit, the family look'), opt('clean', 'Clean', 'Calm, rounded, dark'), opt('paper', 'Paper', 'Light, for daylight')),
+  return h('div', { class: 'ui-pick' }, h('div', { class: 'title' }, 'Interface on this device'), h('div', { class: 'ui-opts' }, opt('arcade', 'Arcade', '8-bit, the family look'), opt('clean', 'Clean', 'Dark, with colour'), opt('paper', 'Paper', 'Light, for daylight')),
     h('div', { class: 'row', style: { marginTop: '10px' } }, h('span', { class: 'small grow' }, 'Text size'), h('div', { class: 'seg ui-size' }, [['small', 'S'], ['normal', 'M'], ['large', 'L']].map(([k, l]) => h('button', { class: u.size === k ? 'active' : '', 'aria-label': `Text size ${k}`, 'aria-pressed': String(u.size === k), onClick: () => setUi({ size: k }) }, l)))));
 }
 function diagnosticsCard() {

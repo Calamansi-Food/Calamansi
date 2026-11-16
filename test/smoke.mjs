@@ -38,6 +38,16 @@ for (const [w, hgt, time, ui] of [[390, 844, '2026-11-16T09:30:00+03:00', 'clean
   const rs = await sheetCheck(() => p.click('#view-kitchen .kt-rcard >> nth=0'), 'recipe sheet');
   check(/°C/.test(rs) && /min/.test(rs), 'the recipe shows machine temperatures and times');
   await sheetCheck(() => p.click('#view-kitchen button:has-text("+ Recipe")'), 'recipe editor');
+  await sheetCheck(() => p.click('#view-kitchen button:has-text("Oven ↔ air fryer")'), 'converter');
+  await sheetCheck(() => p.click('#view-kitchen button:has-text("Safe temperatures")'), 'safe temperatures');
+  await p.click('#view-kitchen button:has-text("Paste a recipe")'); await sleep(250); await p.fill('.sheet textarea', 'Test lemon chicken\n500 g chicken\n1 lemon\n1. Air fryer 200°C 15 min'); await p.click('.sheet button:has-text("Read it")'); await sleep(350);
+  check(await p.locator('.sheet input[value="Test lemon chicken"]').count() === 1, 'a pasted recipe opens in the editor'); await p.keyboard.press('Escape'); await sleep(300);
+  await p.click('#view-kitchen .kt-rcard >> nth=0'); await sleep(300); await p.click('.sheet button:has-text("Cook it now")'); await sleep(300);
+  check(await p.locator('.ck').count() === 1, 'cook mode opens'); await clean(p, '.ck', 'cook mode · get ready'); await p.screenshot({ path: `${shots}/${w}-cook-ready.png` });
+  await p.click('.ck-next'); await sleep(200); await clean(p, '.ck', 'cook mode · step 1');
+  const tb = p.locator('.ck-tbtn'); if (await tb.count()) { await tb.first().click(); await sleep(300); check(await p.locator('.ck-timer').count() >= 1, 'a timer starts from the step'); }
+  await p.screenshot({ path: `${shots}/${w}-cook-step.png` });
+  await p.keyboard.press('Escape'); await sleep(250); check(await p.locator('.ck').count() === 0, 'Esc closes cook mode');
   await p.click('#view-kitchen .chips button:has-text("Light")'); await sleep(200); await clean(p, '#view-kitchen', 'recipes filtered');
   await p.click('#view-kitchen .chips button:has-text("All")'); await sleep(150);
   // Shop
@@ -49,7 +59,17 @@ for (const [w, hgt, time, ui] of [[390, 844, '2026-11-16T09:30:00+03:00', 'clean
   // Life
   await tab('life', 'Bills'); await sheetCheck(() => p.click('#view-life .lf-bill .ch-main >> nth=0'), 'bill sheet');
   await tab('life', 'Car'); await clean(p, '#view-life', 'Life › Car'); await p.screenshot({ path: `${shots}/${w}-car.png`, fullPage: true });
-  await sheetCheck(() => p.click('#view-life .lf-car button[aria-label^="Edit"]'), 'car sheet');
+  await sheetCheck(() => p.click('#view-life .lf-carhero button[aria-label^="Edit"]'), 'car sheet');
+  const it = await sheetCheck(() => p.click('#view-life .lf-item >> nth=0'), 'care item sheet'); check(/Toyota|Saudi|Forums/.test(it), 'a care item shows what the sources say');
+  await sheetCheck(() => p.click('#view-life button:has-text("Log a service")'), 'service visit');
+  await sheetCheck(() => p.click('#view-life .lf-acts button:has-text("Fuel")'), 'fuel sheet');
+  const lifeTxt = await p.locator('#view-life').innerText(); check(/What Camry owners run into/i.test(lifeTxt) && /L \/ 100 km/i.test(lifeTxt), 'known issues and the fuel card show');
+  await tab('life', 'Anatomy'); await clean(p, '#view-life', 'Life › Anatomy'); await p.screenshot({ path: `${shots}/${w}-anatomy.png`, fullPage: true });
+  const part = await sheetCheck(() => p.click('#view-life .an-hot >> nth=3'), 'anatomy part'); check(/What it does/i.test(part) && /How to check/i.test(part), 'a part explains itself');
+  await p.click('#view-life .an-hero button:has-text("Find it")'); await sleep(200);
+  const want = (await p.locator('#view-life .an-hero').innerText()).match(/Find: (.+)/)?.[1]?.trim();
+  if (want) { await p.click(`#view-life .an-hot[aria-label="${want.replace(/"/g, '\\"')}"]`).catch(() => {}); await sleep(300); check(/1\/6/.test(await p.locator('#view-life .an-score').innerText()), 'Find it scores a right answer'); }
+  await tab('life', 'Anatomy'); await p.click('#view-life .seg button:has-text("The whole car")').catch(() => {}); await sleep(200); await clean(p, '#view-life', 'Anatomy › whole car');
   // Home
   await tab('home'); await sheetCheck(() => p.click('#view-home button:has-text("Find a time") >> nth=0'), 'chore planner'); await sheetCheck(() => p.click('#view-home .chore button[aria-label^="Edit"] >> nth=0'), 'chore editor');
   await sheetCheck(() => p.click('#btnSearch'), 'search').catch(() => {});

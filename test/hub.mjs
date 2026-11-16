@@ -5,6 +5,8 @@
 import { chromium, serve, sleep, checker } from './helpers.mjs';
 import { createFakeGoogle } from './fake-google.mjs';
 import { shifts } from './fixture.mjs';
+import { STARTERS } from '../docs/js/kitchen.js';
+const NS = STARTERS.length;
 
 const { server, url } = await serve(), browser = await chromium.launch(), { check, bad } = checker();
 const at = Date.parse('2026-11-10T10:00:00Z');
@@ -50,8 +52,8 @@ check(/Citrus planned 21:00–21:45: groceries/.test(today) && !/Yuzu/.test(toda
 
 console.log('recipes and the week');
 await A.p.click('nav.tabs button[data-view=kitchen]'); await sleep(300);
-await A.p.click('#view-kitchen button:has-text("Add the 16 starter recipes")'); await sleep(400);
-s = await state(A.p); check(Object.keys(s.recipes).length === 16, '16 starter recipes added');
+await A.p.click(`#view-kitchen button:has-text("Add the ${NS} starter recipes")`); await sleep(400);
+s = await state(A.p); check(Object.keys(s.recipes).length === NS, `${NS} starter recipes added`);
 await A.p.click('#view-kitchen button:has-text("Plan my week")'); await sleep(400);
 check(/batch-cook|×4/.test(await A.p.locator('.sheet').innerText()), 'the proposal has a batch cook for the nights');
 await A.p.click('.sheet button:has-text("Use this plan")'); await sleep(600);
@@ -90,13 +92,13 @@ const B = await device('desktop', { width: 1400 });
 await sleep(500);
 check(!(await B.p.locator('.sheet h2:has-text("Bring your chores over")').count()), 'the second device does not ask again');
 await sync(B.p);
-const sb = await state(B.p); check(sb.chores.c1 && Object.keys(sb.recipes).length === 16 && Object.keys(sb.meals).length === meals.length, 'the desktop has the phone’s data');
+const sb = await state(B.p); check(sb.chores.c1 && Object.keys(sb.recipes).length === NS && Object.keys(sb.meals).length === meals.length, 'the desktop has the phone’s data');
 await B.p.evaluate(() => window.__calamansi.store.update(s => window.__calamansi.K.addShop(s, { name: 'Coffee beans' }))); await sleep(300);
 await A.p.evaluate(() => window.__calamansi.store.update(s => { const r = { ...s.recipes }; const id = Object.keys(r)[0]; delete r[id]; return { ...s, recipes: r, deleted: { ...s.deleted, [`recipe:${id}`]: Date.now() } }; })); await sleep(300);
 await sync(B.p); await sync(A.p); await sync(B.p);
 const [ea, eb] = [await state(A.p), await state(B.p)];
 check(Object.values(ea.shopping).some(x => x.name === 'Coffee beans') && Object.values(eb.shopping).some(x => x.name === 'Coffee beans'), 'an item added on the desktop reaches the phone');
-check(Object.keys(ea.recipes).length === 15 && Object.keys(eb.recipes).length === 15, 'a recipe deleted on the phone stays deleted on both');
+check(Object.keys(ea.recipes).length === NS - 1 && Object.keys(eb.recipes).length === NS - 1, 'a recipe deleted on the phone stays deleted on both');
 const twins = g.tree().filter(l => /(status|state)\.json/.test(l) && !/backups|citrus|mandarin/.test(l));
 check(twins.length === new Set(twins).size, `no duplicate files (${twins.length})`);
 check(!A.p.errors.length && !B.p.errors.length, `no page errors${[...A.p.errors, ...B.p.errors].slice(0, 2).join(' | ')}`);

@@ -6,6 +6,7 @@ import * as D from '../docs/js/day.js';
 import * as C from '../docs/js/chores.js';
 import * as K from '../docs/js/kitchen.js';
 import * as L from '../docs/js/life.js';
+import * as CC from '../docs/js/carcare.js';
 import * as HUB from '../docs/js/hub.js';
 import * as MIG from '../docs/js/migrate.js';
 import * as CZ from '../docs/js/custom.js';
@@ -55,6 +56,19 @@ check(K.STARTERS.every(r => Object.entries(r.machines).every(([m, x]) => m === '
 check(Object.keys(K.validateRecipe({ title: '', machines: { oven: { temp: 900 } } })).length === 2, 'the editor refuses a nameless recipe and a 900 °C oven');
 const clean = K.cleanRecipe({ title: 'X', ingredients: ['2 x eggs', null, 7], machines: { oven: { temp: '200', mins: '15' }, toaster: { mins: 3 } } });
 check(clean.ingredients.length === 1 && clean.machines.oven.temp === 200 && !clean.machines.toaster, 'recipes are cleaned (bad lines and unknown machines dropped)');
+
+console.log('cooking tools');
+check(K.STARTERS.length >= 45 && new Set(K.STARTERS.map(r => r.starter)).size === K.STARTERS.length && new Set(K.STARTERS.map(r => r.title)).size === K.STARTERS.length, `${K.STARTERS.length} starter recipes, no duplicates`);
+check(K.STARTERS.every(r => r.steps.length && r.ingredients.length && r.mins > 0 && r.serves > 0), 'every starter has ingredients, steps, time and portions');
+check(K.STARTERS.every(r => Object.entries(r.machines).every(([m, x]) => m === 'microwave' || m === 'stove' || (x.temp >= 130 && x.temp <= 240))), 'every oven / air-fryer temperature is between 130 and 240 °C');
+check(JSON.stringify(K.scaleIng({ item: 'eggs', qty: 4, unit: 'pcs' }, .75)) === JSON.stringify({ item: 'eggs', qty: 3, unit: 'pcs' }) && K.scaleIng({ item: 'rice', qty: 300, unit: 'g' }, 1.5).qty === 450 && K.scaleIng({ item: 'salt', qty: 1, unit: 'tsp' }, .3).qty === .25, 'portions scale to sensible amounts');
+check(JSON.stringify(K.convert('oven', 'airfryer', 200, 30)) === JSON.stringify({ temp: 180, mins: 24 }) && K.convert('airfryer', 'oven', 180, 20).temp === 200, 'oven ↔ air fryer: −20 °C and −20 %');
+check(JSON.stringify(K.stepTimes('Cook 8–10 minutes, rest 30 seconds; marinate 1 hour')) === JSON.stringify([60, 10, 0.5]), 'times in a step become timers');
+const pasted = K.parseRecipeText('Garlic chicken\nServes 3\nIngredients\n500 g chicken\n2 tbsp oil\nMethod\n1. Air fryer at 200°C for 15 min\n2. Rest 5 minutes');
+check(pasted.title === 'Garlic chicken' && pasted.ingredients.length === 2 && pasted.steps.length === 2 && pasted.machines.airfryer.temp === 200 && pasted.serves === 3, 'a pasted recipe becomes a draft (ingredients, steps, air fryer 200 °C, serves 3)');
+const cn = K.cookNow(S0, OWN);
+check(cn.length && cn[0].share >= cn[cn.length - 1].share && cn.some(x => /thighs/i.test(x.r.title)), `cook now ranks by what is in the fridge (top: ${cn[0]?.r.title})`);
+check(K.cookedStats(S0, 'r0').count === 1 && K.cookedStats(S0, 'r0').last === k(15), 'cooked counts come from cooked meals');
 
 console.log('the planner');
 const plan = K.planWeek(S0, { from: NOW, days: 7, owned: OWN, now: NOW });
@@ -114,12 +128,36 @@ check(paid.bills.b2.due === '2026-12-14' && paid.bills.b2.paid.includes(k(16)), 
 const once = L.payBill(L.saveBill(S0, { id: 'o', title: 'Visa fee', every: 0, due: k(20) }), 'o', NOW);
 check(once.bills.o.done && !L.billsDue(once, NOW).some(b => b.id === 'o'), 'a one-off is finished once paid');
 check(L.monthly(S0) === 2850, 'about 2850 SAR a month');
-const sv = L.serviceDue(S0.cars.car1, NOW);
-check(sv.kmLeft === 800 && sv.due === k(20) && sv.byKm > sv.byDate, `the service is due by date first (${sv.byDate}; by km ${sv.byKm})`);
+const old = { name: 'Old car', lastService: '2026-05-20', lastServiceKm: 40000, serviceKm: 10000, serviceMonths: 6, odo: 49200, odoAt: k(10) };
+const sv = L.serviceDue(old, NOW);
+check(sv.kmLeft === 800 && sv.due === k(20), `a car without a care plan keeps the simple service (${sv.due})`);
 const al = L.carAlerts(S0, NOW);
-check(al.some(a => a.kind === 'fahas' && a.days === 14) && al.some(a => a.kind === 'service' && a.days === 4) && !al.some(a => a.kind === 'istimara' || a.kind === 'insurance'), 'fahas and the service warn; insurance (34 days) and the istimara are not yet');
-const sv2 = L.serviced(S0, 'car1', { date: k(16), km: 49300 });
-check(sv2.cars.car1.lastServiceKm === 49300 && !L.carAlerts(sv2, NOW).some(a => a.kind === 'service'), 'a logged service resets the clock');
+check(al.some(a => a.kind === 'fahas' && a.days === 14) && !al.some(a => a.kind === 'istimara' || a.kind === 'insurance'), 'fahas warns; insurance (34 days) and the istimara are not yet');
+check(al.some(a => a.kind === 'battery' && a.care) && al.some(a => a.kind === 'oil') && !al.some(a => a.kind === 'wash' || a.kind === 'tyrePressure'), 'the battery test (late) and the oil (soon) warn; washes never reach the hub');
+
+console.log('car care (Camry 2016)');
+const cam = S0.cars.car1;
+check(CC.kmPerDay(cam) === 35, `35 km a day from two readings (${CC.kmPerDay(cam)})`);
+const on = CC.odoNow(cam, NOW); check(on.km === 49410 && on.guessed, `the odometer moves on between readings (≈ ${on.km})`);
+const oil = CC.itemState(cam, 'oil', NOW);
+check(oil.kmLeft === 90 && oil.state === 'soon' && oil.by === 'km' && oil.date === k(19), `oil: 90 km left, about 3 days at 35 km a day (${oil.date})`);
+check(CC.interval(cam, 'oil').km === 8000 && CC.interval({ ...cam, severe: false }, 'oil').km === 16000 && CC.interval({ ...cam, severe: false }, 'oil').months === 12, 'oil every 8,000 km / 6 months in the heat, 16,000 km / 12 months normally');
+check(CC.itemState(cam, 'battery', NOW).state === 'late' && CC.itemState(cam, 'coolant', NOW).state === 'unknown', 'the battery test is late; coolant not set up yet');
+check(CC.plan(cam, NOW)[0].state === 'late' && CC.plan(cam, NOW).slice(-1)[0].state === 'unknown', 'the plan lists late first, never-logged last');
+check(CC.itemState(CC.setInterval(cam, 'oil', { km: 10000 }), 'oil', NOW).nextKm === 51500, 'your own interval wins');
+check(!CC.plan(CC.setInterval(cam, 'atf', { off: true }), NOW).some(x => x.id === 'atf'), 'an item can be switched off');
+const v = CC.logVisit(cam, { date: k(16), km: 49450, items: ['oil', 'rotate'], cost: 280, place: 'Workshop' });
+check(v.care.oil.last === k(16) && v.care.oil.lastKm === 49450 && v.care.oil.count === 4 && v.odo === 49450, 'a service restarts the items and records the reading');
+check(CC.itemState(v, 'oil', NOW).state === 'ok' && CC.itemState(v, 'oil', NOW).kmLeft === 8000, 'oil is good for 8,000 km again');
+check(v.log.length === 2 && v.log[1].cost === 280, 'the visit is in the history');
+check(CC.interval(CC.logVisit(cam, { date: k(16), items: ['coolant'] }), 'coolant').months === 60, 'after the first coolant change: every 5 years');
+check(CC.addReading(cam, 40000, k(16)) === null && CC.addReading(cam, 49600, k(16)).odo === 49600, 'a reading lower than the last is refused');
+const eco = CC.economy(cam); check(eco.length === 1 && eco[0].l100 === 7.5, `full to full: 45 L over 600 km = 7.5 L/100 km (${eco[0]?.l100})`);
+const cs = CC.costs(cam, NOW); check(cs.fuel === 198 && cs.care === 260 && cs.perKm === 0.17, `money this year: fuel ${cs.fuel}, servicing ${cs.care}, ${cs.perKm} SAR/km`);
+const saved = L.saveCar(S0, { ...cam, care: { ...cam.care, junk: { last: 'x' }, oil: { last: 'bad' } }, odoLog: [...cam.odoLog, { date: 'no', km: 5 }] }, NOW).cars.car1;
+check(!saved.care.junk && !saved.care.oil.last && saved.odoLog.length === 2 && saved.model === 'camry-2016', 'care data is cleaned on save');
+const legacy = L.saveCar(S0, { id: 'z', name: 'Legacy', odo: 1000, odoAt: k(1) }, NOW).cars.z;
+check(legacy.odoLog.length === 1 && legacy.odoLog[0].km === 1000, 'a 1.0 car keeps its reading as the first in the log');
 
 console.log('status.json for Citrus');
 const st = HUB.buildStatus(S0, NOW);
@@ -127,6 +165,7 @@ check(st.app === 'calamansi' && st.contract === 2 && st.url.startsWith('https://
 check(/chores? due/.test(st.summary) && /dinner: air-fryer salmon/.test(st.summary), `summary: "${st.summary}"`);
 check(st.summary.length <= 140 && st.pending.length <= 10 && st.inbox.length <= 25 && st.metrics.length <= 12 && st.actions.length <= 6, 'within the caps');
 check(st.inbox.some(i => i.id === `bill-b2-${k(14)}` && i.date === k(16) && i.type === 'task') && st.inbox.some(i => i.id === `car-car1-fahas-${k(30)}`), 'bills and car papers become dated tasks with stable ids');
+check(st.inbox.some(i => i.id === 'care-car1-battery-2025-11-01') && st.inbox.some(i => i.id === 'care-car1-oil-2026-07-20' && /90 km left/.test(i.title)), 'car care items become tasks pinned to their last-done date');
 check(HUB.buildStatus(S0, NOW).inbox.map(i => i.id).join() === st.inbox.map(i => i.id).join(), 'the same day gives the same ids');
 check(st.asks.some(a => a.date === k(19) && /batch-cook/.test(a.title)), 'the batch cook is asked of Citrus');
 check(st.extra.chores.length && st.extra.meals.today.some(m => m.title === 'Air-fryer salmon with lemon') && st.extra.shopping.open === 2, 'extra: chores, meals, shopping for Citrus’s Today');
@@ -159,7 +198,7 @@ check(mergeStates(S0, C1).shopping.s1.done, 'the newer tick wins');
 console.log('backups and settings');
 check(checkBackup({ app: 'clementine', friends: {} }).ok === false, 'another app’s backup is refused');
 const cb = checkBackup({ ...S0, friends: { x: {} }, recipes: { ...S0.recipes, bad: 7 } });
-check(cb.ok && !cb.state.friends && !cb.state.recipes.bad && cb.dropped.length === 2 && cb.summary.counts.recipes === 16, 'a backup is cleaned before it is restored');
+check(cb.ok && !cb.state.friends && !cb.state.recipes.bad && cb.dropped.length === 2 && cb.summary.counts.recipes === K.STARTERS.length, 'a backup is cleaned before it is restored');
 const cz = CZ.custom({ settings: { custom: { kitchen: { machines: ['airfryer', 'laser'], days: 99 }, diet: { kcal: -5 }, tabs: { hidden: ['today', 'shop'] } } } });
 check(cz.kitchen.machines.join() === 'airfryer' && cz.kitchen.days === 7 && cz.diet.kcal === 0 && cz.tabs.hidden.join() === 'shop', 'settings are cleaned (unknown machines, odd numbers, Today always shown)');
 

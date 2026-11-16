@@ -3,6 +3,8 @@
 // for now (Citrus Plan owns goals; they may come from there later).
 import { keyOf, fromKey, addDays, startOfDay, uid } from './util.js';
 import { dayKind, KIND_LABEL } from './day.js';
+import { MORE, SAFE } from './recipes-data.js';
+export { SAFE };
 
 const isKey = (v) => /^\d{4}-\d\d-\d\d$/.test(v || '');
 const rec = (o) => Object.values(o || {});
@@ -114,7 +116,7 @@ export function validateRecipe(r, s = null) {
 
 // Starter recipes: plain, original, each with times for the machines you have. Doneness rules: chicken 74 °C inside, minced meat 71 °C, fish flakes.
 const I = (item, qty, unit, cat) => ({ item, qty, unit, ...(cat ? { cat } : {}) });
-export const STARTERS = [
+const BASE = [
   { starter: 'af-thighs', title: 'Air-fryer chicken thighs', icon: '🍗', meal: 'main', mins: 25, serves: 2, batch: true, keeps: 3, freezes: true, kcal: 430, protein: 38,
     ingredients: [I('boneless chicken thighs', 500, 'g'), I('olive oil', 1, 'tbsp'), I('paprika', 1, 'tsp'), I('garlic powder', 1, 'tsp'), I('lemon', 1, 'pcs'), I('salt', 0, '')],
     machines: { airfryer: { temp: 200, mins: 18, note: 'turn at 10 min' }, oven: { temp: 200, mins: 28, note: 'on a rack' } },
@@ -176,6 +178,8 @@ export const STARTERS = [
     machines: { oven: { temp: 190, mins: 50, note: 'covered with foil, then 10 min uncovered' }, stove: { mins: 60 } },
     steps: ['Brown onion and chicken, add tomato, spice and stock.', 'Add washed rice and hot water to 2 cm above, cover.', 'Bake until the rice is tender and the chicken 74 °C; nuts and raisins on top.'], tags: ['day off', 'meal prep'] },
 ];
+/** Every starter recipe: the first 16 (1.0) and the bigger library (1.1). */
+export const STARTERS = [...BASE, ...MORE];
 /** The starter recipes you do not have yet (by starter id or by name). */
 export function startersMissing(s) { const have = new Set(recipeList(s).flatMap(r => [r.starter, r.title.toLowerCase()].filter(Boolean))); return STARTERS.filter(r => !have.has(r.starter) && !have.has(r.title.toLowerCase())); }
 export function addStarters(s, list = startersMissing(s)) { let out = s; for (const r of list) out = saveRecipe(out, { ...r, id: 'r' + uid() }); return out; }
@@ -411,3 +415,68 @@ export function boughtToPantry(s, id, now = new Date()) {
 }
 /** Clear the ticked rows (after the shop). */
 export function clearDone(s) { let out = s; for (const x of shopList(s).filter(x => x.done)) out = removeShop(out, x.id); return out; }
+
+// ───────────────────────── cooking helpers (1.1)
+/** An ingredient for `factor` × the recipe (1.5 eggs → 2; 375 g stays 375 g; 0.25 tsp kept). */
+export function scaleIng(i, factor) {
+  if (!i.qty) return { ...i };
+  let q = i.qty * factor; const u = unitOf(i.unit);
+  if (['pcs', 'can', 'pack', 'clove', 'bunch', 'portions'].includes(u)) q = q < 1 ? Math.round(q * 4) / 4 : Math.round(q * 2) / 2;
+  else if (['tsp', 'tbsp', 'cup'].includes(u)) q = Math.round(q * 4) / 4;
+  else if (u === 'g' || u === 'ml') q = q >= 100 ? Math.round(q / 5) * 5 : Math.round(q);
+  else q = Math.round(q * 100) / 100;
+  return { ...i, qty: q };
+}
+/** Oven ↔ air fryer, the common rule of thumb: about 20 °C lower and 20 % shorter in the air fryer. Check doneness, not the clock. */
+export function convert(from, to, temp, mins) {
+  const t = +temp || 0, m = +mins || 0;
+  if (from === 'oven' && to === 'airfryer') return { temp: t ? Math.max(140, Math.round((t - 20) / 5) * 5) : 0, mins: Math.max(1, Math.round(m * 0.8)) };
+  if (from === 'airfryer' && to === 'oven') return { temp: t ? Math.min(250, Math.round((t + 20) / 5) * 5) : 0, mins: Math.max(1, Math.round(m * 1.25)) };
+  return { temp: t, mins: m };
+}
+/** Times written in a step ("8 min", "1–2 minutes", "1 hour", "30 seconds") → minutes, longest first; for one-tap timers. */
+export function stepTimes(text) {
+  const out = []; const t = String(text || '');
+  for (const m of t.matchAll(/(\d+(?:[.,]\d+)?)(?:\s*(?:–|-|to)\s*(\d+(?:[.,]\d+)?))?\s*(hours?|hrs?|h\b|minutes?|mins?|seconds?|secs?|s\b)/gi)) {
+    const a = +m[1].replace(',', '.'), b = m[2] ? +m[2].replace(',', '.') : a, u = m[3].toLowerCase(), v = Math.max(a, b);
+    const min = /^h/.test(u) ? v * 60 : /^s/.test(u) ? v / 60 : v;
+    if (min > 0 && min <= 24 * 60 && !out.includes(min)) out.push(min);
+  }
+  return out.sort((x, y) => y - x).slice(0, 3);
+}
+/** What you can cook from the fridge right now: share of ingredients you have (staples count as had), the missing ones. */
+export function cookNow(s, owned) {
+  return recipeList(s).filter(r => cookable(r, owned)).map(r => {
+    const need = r.ingredients.filter(i => !STAPLE.test(i.item.trim())), have = need.filter(i => stockOf(s, i.item, i.unit).have);
+    return { r, share: need.length ? have.length / need.length : 0, have: have.length, need: need.length, missing: need.filter(i => !have.includes(i)) };
+  }).filter(x => x.have >= 1).sort((a, b) => b.share - a.share || a.missing.length - b.missing.length || (b.r.fav - a.r.fav)).slice(0, 8);
+}
+/** How often you cooked a recipe, and when last (from cooked meals). */
+export function cookedStats(s, id) { const l = rec(s.meals).filter(m => m.recipeId === id && m.cooked && !m.fromBatch).map(m => m.cooked).sort(); return { count: l.length, last: l[l.length - 1] || '' }; }
+/**
+ * A recipe from pasted text (a website, a WhatsApp message): the first line is the title; lines that start with an amount are
+ * ingredients; the rest are steps (numbers and bullets stripped); °C and minutes near "air fryer" / "oven" / "microwave" fill
+ * the machines. Returns a draft for the editor — nothing is saved until you press Save.
+ */
+export function parseRecipeText(text) {
+  const lines = String(text || '').replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean);
+  if (!lines.length) return null;
+  const title = lines[0].replace(/^#+\s*/, '').slice(0, 60), ingredients = [], steps = [], machines = {};
+  let mode = '';
+  for (const raw of lines.slice(1)) {
+    const l = raw.replace(/^[-•*·]\s*/, '');
+    if (/^ingredients?:?$/i.test(l)) { mode = 'ing'; continue; }
+    if (/^(method|steps?|directions?|instructions?|preparation):?$/i.test(l)) { mode = 'step'; continue; }
+    if (/^(serves?|servings?|makes|yield|prep|cook(ing)? time|total time)\b/i.test(l)) continue;
+    const numbered = /^(\d+[.)]\s|step\s*\d)/i.test(l);
+    const looksIng = !numbered && /^(\d+([.,/]\d+)?|[½¼¾⅓⅔]|[٠-٩])/.test(l) && l.length < 70 && !/\b(min|minutes|°c|degrees)\b/i.test(l);
+    if ((mode === 'ing' && !numbered) || (mode !== 'step' && looksIng)) { const p = parseIngredient(l); if (p) { ingredients.push(p); continue; } }
+    steps.push(l.replace(/^(\d+[.)]|step\s*\d+:?)\s*/i, '').slice(0, 300));
+    const lw = l.toLowerCase(), temp = /(\d{2,3})\s*°?\s*c\b/i.exec(l)?.[1], mins = stepTimes(l)[0];
+    for (const [id, re] of [['airfryer', /air ?fryer/], ['oven', /\boven\b/], ['microwave', /microwave/], ['stove', /\b(pan|hob|stove|simmer|boil)\b/]]) if (re.test(lw) && !machines[id]) machines[id] = { ...(temp && id !== 'microwave' ? { temp: +temp } : {}), ...(id === 'microwave' ? { power: 'High' } : {}), ...(mins ? { mins: Math.round(mins) } : {}) };
+  }
+  const serves = +(/serves?\s*(\d+)/i.exec(text)?.[1] || 0);
+  return { title, ingredients, steps: steps.slice(0, 30), machines, ...(serves ? { serves } : {}) };
+}
+/** Tags across your recipes, most used first — the cuisine and style filters. */
+export function tagCloud(s) { const n = new Map(); for (const r of recipeList(s)) for (const t of r.tags) n.set(t, (n.get(t) || 0) + 1); return [...n].sort((a, b) => b[1] - a[1]).map(x => x[0]); }

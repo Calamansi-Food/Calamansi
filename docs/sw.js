@@ -1,12 +1,12 @@
 // Calamansi service worker: precached app shell, network-first with a short timeout, Google Fonts cached for offline.
-const CACHE = 'calamansi-b868916f62';
+const CACHE = 'calamansi-95bd0899f8';
 const FONTS = 'calamansi-fonts-v1';   // kept across releases: font files are immutable, no need to fetch them again
-const FONT_CSS = 'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Manrope:wght@500;600;700;800&family=Pixelify+Sans:wght@500;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap';
+const FONT_CSS = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Unbounded:wght@600;700;800&family=Manrope:wght@500;600;700;800&family=Pixelify+Sans:wght@500;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap';
 // Without these the app cannot start offline: install fails (and the old worker stays) if one is missing.
 const CORE = ['./', './index.html', './css/app.css', './js/app.js', './js/util.js', './manifest.webmanifest'];
 // Everything else in docs/js (scripts-bump.sh writes it from the folder). Fetched one by one so a
 // file that was renamed or merged away does not block the install; it just is not cached.
-const JS = ['backup-check','chores-cal','chores','custom','day','google','home-ui','hub','kitchen-ui','kitchen','life-ui','life','migrate','roster','shop-ui','store-alerts','store','today-ui'];
+const JS = ['anatomy','backup-check','carcare','chores-cal','chores','cook','custom','day','google','home-ui','hub','kitchen-ui','kitchen','life-ui','life','migrate','recipes-data','roster','shop-ui','store-alerts','store','today-ui'];
 const ASSETS = [...JS.map(f => `./js/${f}.js`), './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png'];
 const NET_TIMEOUT = 2500;   // on weak signal ("lie-fi") serve the cached shell after 2.5 s instead of hanging on the fetch
 

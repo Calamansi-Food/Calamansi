@@ -48,7 +48,12 @@ export function buildStatus(s, now = new Date(), { plan = null } = {}) {
 
   const inbox = [];
   for (const b of bills.slice(0, 8)) inbox.push({ id: `bill-${b.id}-${b.due}`.slice(0, 60), type: 'task', title: `${b.kind === 'renewal' ? 'Renew' : 'Pay'} ${b.title}${b.amount ? ` (${b.amount} SAR)` : ''}`, date: b.due < t ? t : b.due, minutes: 5, pri: b.due <= t ? 1 : 2, url: `${SITE_URL}?do=bills`, expires: keyOf(addDays(fromKey(b.due < t ? t : b.due), 7)) });
-  for (const a of cars.slice(0, 6)) inbox.push({ id: `car-${a.car.id}-${a.kind}-${a.date}`.slice(0, 60), type: 'task', title: a.kind === 'service' ? `Book a service for ${a.car.name}` : `Renew ${a.label.replace(/ \(.*\)$/, '').toLowerCase()} for ${a.car.name}`, date: a.date < t ? t : a.date, minutes: a.kind === 'service' ? 15 : 20, pri: a.days <= 7 ? 1 : 2, url: `${SITE_URL}?do=car`, expires: keyOf(addDays(fromKey(a.date < t ? t : a.date), 14)) });
+  for (const a of cars.slice(0, 6)) {
+    // care items are due by km too, so their date moves a little each day: the id is pinned to when the item was last done
+    const id = a.care ? `care-${a.car.id}-${a.kind}-${a.car.care?.[a.kind]?.last || 'x'}` : `car-${a.car.id}-${a.kind}-${a.date}`;
+    const title = a.care ? `${a.label} for ${a.car.name}${a.kmLeft != null ? (a.kmLeft < 0 ? ` (${(-a.kmLeft).toLocaleString('en')} km over)` : ` (${a.kmLeft.toLocaleString('en')} km left)`) : ''}` : a.kind === 'service' ? `Book a service for ${a.car.name}` : `Renew ${a.label.replace(/ \(.*\)$/, '').toLowerCase()} for ${a.car.name}`;
+    inbox.push({ id: id.slice(0, 60), type: 'task', title, date: a.date < t ? t : a.date, minutes: a.care ? 30 : a.kind === 'service' ? 15 : 20, pri: a.days <= 7 ? 1 : 2, url: `${SITE_URL}?do=car`, expires: keyOf(addDays(fromKey(a.date < t ? t : a.date), 14)) });
+  }
   // time Calamansi wants: the batch cook before a night stretch (Citrus places it around your shifts)
   const asks = batches.slice(0, 3).map(b => { const r = s.recipes?.[b.recipeId]; return { date: b.key, title: `Calamansi: batch-cook ${r ? r.title : 'for the week'}`, minutes: Math.min(120, Math.max(30, (r?.mins || 45) + 15)), slot: 'free' }; });
   if (open.length >= 5) asks.push({ date: t, title: `Calamansi: groceries (${open.length} things)`, minutes: 45, slot: 'free' });

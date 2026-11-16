@@ -1,6 +1,7 @@
 // Daily life: bills, renewals and subscriptions, and the car (service, istimara, fahas, insurance). Pure (no DOM).
 // Amounts are reminders for you, never payments: Calamansi does not pay anything. Dates are dd/mm/yyyy on screen.
 import { keyOf, fromKey, addDays, startOfDay, uid } from './util.js';
+import * as CC from './carcare.js';
 
 const isKey = (v) => /^\d{4}-\d\d-\d\d$/.test(v || '');
 const rec = (o) => Object.values(o || {});
@@ -60,7 +61,9 @@ export function saveCar(s, c, now = new Date()) {
   const name = txt(c.name, 40); if (!name) return s; const id = c.id || 'c' + uid();
   const car = { id, name, icon: txt(c.icon, 8) || '🚗', ...Object.fromEntries(CAR_PAPERS.map(([k]) => [k, isKey(c[k]) ? c[k] : ''])),
     serviceMonths: Math.round(num(c.serviceMonths, 0, 36, 6)), serviceKm: Math.round(num(c.serviceKm, 0, 100000, 10000)), lastService: isKey(c.lastService) ? c.lastService : '', lastServiceKm: Math.round(num(c.lastServiceKm, 0, 2e6, 0)),
-    odo: Math.round(num(c.odo, 0, 2e6, 0)), odoAt: isKey(c.odoAt) ? c.odoAt : c.odo ? keyOf(now) : '', log: (Array.isArray(c.log) ? c.log : []).filter(x => x && isKey(x.date)).slice(-30), at: Date.now() };
+    odo: Math.round(num(c.odo, 0, 2e6, 0)), odoAt: isKey(c.odoAt) ? c.odoAt : c.odo ? keyOf(now) : '', log: (Array.isArray(c.log) ? c.log : []).filter(x => x && isKey(x.date)).slice(-200), ...CC.cleanCare(c), at: Date.now() };
+  if (!car.odoLog.length && car.odo && car.odoAt) car.odoLog = [{ date: car.odoAt, km: car.odo }];   // cars from 1.0 keep their reading
+  if (car.odoLog.length) { const l = car.odoLog[car.odoLog.length - 1]; car.odo = l.km; car.odoAt = l.date; }
   return { ...s, cars: { ...(s.cars || {}), [id]: car } };
 }
 export const updateCar = (s, id, patch) => s.cars?.[id] ? saveCar(s, { ...s.cars[id], ...patch, id }) : s;
@@ -85,8 +88,13 @@ export function carAlerts(s, now = new Date()) {
   const out = [];
   for (const c of carList(s)) {
     for (const [k, label, icon, warn] of CAR_PAPERS) { const d = daysUntil(c[k], now); if (d !== null && d <= warn) out.push({ car: c, kind: k, label, icon, date: c[k], days: d }); }
+    if (c.model) { for (const st of CC.careAlerts(c, now)) if (!CC.ITEMS[st.id].days) out.push({ car: c, kind: st.id, label: CC.ITEMS[st.id].label, icon: CC.ITEMS[st.id].icon, date: st.date || keyOf(now), days: st.days ?? 0, kmLeft: st.kmLeft, care: true }); continue; }
     const sv = serviceDue(c, now); if (sv.due && sv.days <= 14) out.push({ car: c, kind: 'service', label: 'Service', icon: '🛠️', date: sv.due, days: sv.days, kmLeft: sv.kmLeft });
   }
   return out.sort((a, b) => a.days - b.days);
 }
-export const alertText = (a) => `${a.car.name}: ${a.label.replace(/ \(.*\)$/, '')} ${a.days < 0 ? `expired ${-a.days} day${a.days === -1 ? '' : 's'} ago` : a.days === 0 ? 'due today' : `due in ${a.days} day${a.days === 1 ? '' : 's'}`}${a.kmLeft != null && a.kind === 'service' && a.kmLeft < 1500 ? ` (${Math.max(0, a.kmLeft)} km left)` : ''}`;
+export const alertText = (a) => {
+  if (a.care && a.kmLeft != null && a.kmLeft < 0) return `${a.car.name}: ${a.label} ${(-a.kmLeft).toLocaleString('en')} km overdue`;
+  const when = a.days < 0 ? (a.care ? `overdue by ${-a.days} day${a.days === -1 ? '' : 's'}` : `expired ${-a.days} day${a.days === -1 ? '' : 's'} ago`) : a.days === 0 ? 'due today' : `due in ${a.days} day${a.days === 1 ? '' : 's'}`;
+  return `${a.car.name}: ${a.label.replace(/ \(.*\)$/, '')} ${when}${a.kmLeft != null && (a.kind === 'service' || a.care) && a.kmLeft < 1500 ? ` (${Math.max(0, a.kmLeft).toLocaleString('en')} km left)` : ''}`;
+};
