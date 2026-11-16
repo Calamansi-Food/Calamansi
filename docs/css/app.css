@@ -1,0 +1,1035 @@
+/* Calamansi — the citrus family's look (Manrope, ink surfaces), in calamansi lime. Phone first; a left rail + two columns from 900px. */
+:root {
+  --ink: #0c0d12; --bg: #0f1117; --bg2: #161925; --card: #1a1e2b; --card2: #222738; --line: #2a3043; --line2: #343b52;
+  --text: #f3f2ee; --muted: #a0a6b8; --dim: #8a91a8;   /* --dim ≥ 4.5:1 on cards at 11px (beta T09-15, T10-25) */
+  --orange: #ff6a3d; --orange2: #ff9a72; --orange-soft: rgba(255, 106, 61, .15);
+  --night: #7d8cff; --night-soft: rgba(125, 140, 255, .16);
+  --day: #ffc857; --day-soft: rgba(255, 200, 87, .14);
+  --eve: #c58cff; --eve-soft: rgba(197, 140, 255, .14);
+  --green: #5fd38d; --green-soft: rgba(95, 211, 141, .14);
+  --red: #ff5f6d; --red-soft: rgba(255, 95, 109, .14);
+  --blue: #4fb3ff; --cyan: #7ffaee; --cyan-soft: rgba(127, 250, 238, .14);
+  --r: 18px; --rs: 11px;
+  --nav-h: 64px; --rail-w: 220px; --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px);
+  --font: "Manrope", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --shadow: 0 10px 30px rgba(0, 0, 0, .35);
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --ink: #fff7ee; --bg: #fbf6ee; --bg2: #ffffff; --card: #ffffff; --card2: #f5efe4; --line: #e9e1d3; --line2: #dccfbb;
+  --text: #1b1a1f; --muted: #5f6270; --dim: #666a78;
+  --orange-soft: rgba(255, 106, 61, .12); --night: #5b6cf0; --night-soft: rgba(91, 108, 240, .12); --day: #d99a00; --day-soft: rgba(217, 154, 0, .14);
+  --eve: #9b5de5; --eve-soft: rgba(155, 93, 229, .12); --green: #1f9d55; --green-soft: rgba(31, 157, 85, .12); --red: #e0394b; --cyan: #0bb5a5; --cyan-soft: rgba(11, 181, 165, .12);
+  --shadow: 0 10px 30px rgba(60, 40, 10, .12);
+  color-scheme: light;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { background: var(--bg); }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.45; font-feature-settings: "tnum" 1; padding-bottom: calc(var(--nav-h) + var(--sab)); min-height: 100vh; }
+a { color: var(--orange2); text-decoration: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; padding: 0; }
+:focus-visible { outline: 2px solid var(--orange); outline-offset: 2px; border-radius: 6px; }
+h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -.015em; }
+h1 { font-size: 26px; } h2 { font-size: 18px; } h3 { font-size: 15px; font-weight: 600; }
+.muted { color: var(--muted); } .dim { color: var(--dim); } .small { font-size: 13px; } .tiny { font-size: 11.5px; }
+.orange { color: var(--orange); }
+.row { display: flex; align-items: center; gap: 10px; } .row.wrap { flex-wrap: wrap; } .grow { flex: 1; min-width: 0; }
+ .right { margin-left: auto; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* top bar */
+.topbar { position: sticky; top: 0; z-index: 20; padding: calc(10px + var(--sat)) 16px 8px; background: linear-gradient(var(--bg) 75%, transparent); display: flex; align-items: center; gap: 10px; }
+.topbar .brand { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 19px; letter-spacing: -.02em; }
+.topbar .brand .dot { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #e8f7a8, #9fd94a 55%, #4f8f1f); box-shadow: 0 0 14px rgba(159, 217, 74, .5); }
+.topbar .sync { width: 8px; height: 8px; border-radius: 50%; background: var(--dim); }
+.topbar .sync.on { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.topbar .sync.busy { background: var(--orange); animation: pulse 1s infinite; }
+#syncText { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1 1 auto; }
+.topbar .brand { flex-shrink: 0; } .topbar .btn.icon { flex-shrink: 0; }
+@media (max-width: 420px) { #syncText { display: none; } .topbar .brand { font-size: 17px; } .topbar { gap: 6px; } }
+@keyframes pulse { 50% { opacity: .3; } }
+
+main { padding: 0 16px 28px; max-width: 720px; margin: 0 auto; }
+section.view { display: none; } section.view.active { display: block; }
+
+.banner { display: flex; align-items: center; gap: 10px; background: var(--orange-soft); border: 1px solid var(--orange); color: var(--text); border-radius: var(--rs); padding: 10px 12px; margin-bottom: 12px; font-size: 13.5px; }
+
+/* cards: one radius for containers, a smaller one for controls; no decorative shadows except the hero */
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; margin-bottom: 14px; }
+.card .title { font-size: 13.5px; color: var(--muted); margin-bottom: 10px; font-weight: 600; }
+.card.hero { position: relative; overflow: hidden; background: radial-gradient(120% 90% at 100% 0%, var(--accent-soft, var(--orange-soft)) 0%, transparent 55%), var(--card); box-shadow: var(--shadow); border-color: var(--line2); padding: 18px; }
+
+.card.hero .sub { color: var(--muted); font-size: 14px; }
+
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+
+/* chips */
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 12.5px; font-weight: 600; background: var(--card2); color: var(--text); border: 1px solid var(--line); line-height: 1.3; }
+.chip.D { background: var(--day-soft); color: var(--day); border-color: transparent; }
+.chip.N { background: var(--night-soft); color: var(--night); border-color: transparent; }
+.chip.E { background: var(--eve-soft); color: var(--eve); border-color: transparent; }
+.chip.SF, .chip.AD, .chip.HQ, .chip.SPD, .chip.STC, .chip.NA, .chip.OR, .chip.other { background: var(--orange-soft); color: var(--orange2); border-color: transparent; }
+.chip.leave { background: var(--red-soft); color: var(--red); border-color: transparent; }
+.chip.off { background: var(--green-soft); color: var(--green); border-color: transparent; }
+.chip.sel { background: var(--orange); color: #141414; border-color: var(--orange); }
+
+.chip.swap { background: var(--eve-soft); color: var(--eve); border-color: transparent; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 14px; border-radius: 12px; background: var(--card2); border: 1px solid var(--line); font-weight: 600; font-size: 14px; transition: transform .08s, background .15s, border-color .15s; white-space: nowrap; }
+.btn:hover { border-color: var(--line2); } .btn:active { transform: scale(.97); }
+.btn.primary { background: var(--orange); color: #141414; border-color: var(--orange); } .btn.primary:hover { background: var(--orange2); }
+.btn.ghost { background: transparent; border-color: transparent; } .btn.ghost:hover { background: var(--card2); }
+.btn.danger { color: var(--red); }
+.btn.sm { padding: 6px 10px; font-size: 13px; border-radius: 10px; }
+.btn.icon { padding: 8px; width: 36px; height: 36px; }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn.block { width: 100%; }
+
+/* lists */
+.list { display: flex; flex-direction: column; }
+.item { display: flex; align-items: center; gap: 12px; padding: 11px 0; border-bottom: 1px solid var(--line); }
+.item:last-child { border-bottom: 0; }
+
+.item .name { font-weight: 600; } .item .meta { color: var(--muted); font-size: 12.5px; }
+.item.clickable { cursor: pointer; } .item.clickable:hover .name { color: var(--orange2); }
+
+/* calendar grid */
+
+.cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal .day { aspect-ratio: 1 / 1.15; border-radius: 12px; background: var(--card2); border: 1px solid transparent; padding: 5px 4px; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; position: relative; min-width: 0; transition: border-color .12s; }
+.cal .day:hover { border-color: var(--line2); }
+
+.cal .day .n { font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.cal .day.today { border-color: var(--orange); } .cal .day.today .n { color: var(--orange); }
+.cal .day.sel { outline: 2px solid var(--orange2); outline-offset: -2px; }
+.cal .day .code { font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 6px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal .day .code.D { background: var(--day-soft); color: var(--day); } .cal .day .code.N { background: var(--night-soft); color: var(--night); }
+.cal .day .code.E { background: var(--eve-soft); color: var(--eve); } .cal .day .code.other { background: var(--orange-soft); color: var(--orange2); }
+.cal .day .code.leave { background: var(--red-soft); color: var(--red); } .cal .day .code.off { color: var(--dim); font-weight: 600; }
+
+.cal .day .with { display: none; }
+@media (min-width: 900px) { .cal .day .with { display: block; } }
+
+.cal .day.swap::after { content: ""; position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--eve); }
+@media (min-width: 900px) { .cal .day { aspect-ratio: 1 / 1; } }
+
+/* week strip */
+.week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+@media (max-width: 360px) { .week { gap: 3px; } .cal { gap: 2px; } .cal .day { padding: 4px 1px; border-radius: 9px; } .cal .day .code { font-size: 10px; padding: 1px 3px; } .card { padding: 13px; } main { padding: 0 10px 24px; } }
+
+/* timeline blocks */
+
+/* forms */
+.field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+.field label { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.field input, .field select, .field textarea, input.inp, textarea.inp { background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; outline: none; color: var(--text); }
+.field input:focus, .field select:focus, .field textarea:focus, .inp:focus { border-color: var(--orange); }
+
+.switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); } .switch:last-child { border-bottom: 0; }
+.toggle { width: 44px; height: 26px; border-radius: 13px; background: var(--line2); position: relative; transition: background .15s; flex-shrink: 0; }
+.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; transition: left .15s; }
+.toggle.on { background: var(--orange); } .toggle.on::after { left: 21px; }
+
+/* bottom nav (phone) */
+nav.tabs { position: fixed; bottom: 0; left: 0; right: 0; height: calc(var(--nav-h) + var(--sab)); padding-bottom: var(--sab); background: color-mix(in srgb, var(--bg2) 90%, transparent); backdrop-filter: blur(16px); border-top: 1px solid var(--line); display: flex; z-index: 30; }
+nav.tabs button { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: var(--dim); font-size: 11px; font-weight: 600; }
+nav.tabs button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+nav.tabs button.active { color: var(--orange); }
+
+/* sheets */
+.sheet-bg { position: fixed; inset: 0; background: rgba(5, 6, 10, .6); z-index: 40; display: flex; align-items: flex-end; justify-content: center; animation: fade .15s; }
+@keyframes fade { from { opacity: 0; } }
+.sheet { background: var(--bg2); width: 100%; max-width: 760px; max-height: 88vh; overflow: auto; border-radius: 22px 22px 0 0; padding: 14px 16px calc(20px + var(--sab)); border: 1px solid var(--line); animation: up .22s cubic-bezier(.2, .8, .2, 1); }
+@keyframes up { from { transform: translateY(24px); opacity: 0; } }
+.sheet .handle { width: 40px; height: 4px; border-radius: 2px; background: var(--line2); margin: 0 auto 12px; }
+
+/* toasts */
+#toasts { position: fixed; left: 0; right: 0; bottom: calc(var(--nav-h) + var(--sab) + 12px); display: flex; flex-direction: column; align-items: center; gap: 6px; z-index: 50; pointer-events: none; }
+@media (min-width: 900px) { #toasts { bottom: 24px; left: var(--rail-w); } }
+.toast { background: var(--card2); border: 1px solid var(--line2); color: var(--text); padding: 10px 14px; border-radius: 12px; font-size: 13.5px; opacity: 0; transform: translateY(8px); transition: all .25s; max-width: 90%; box-shadow: var(--shadow); }
+.toast.show { opacity: 1; transform: none; } .toast.err { border-color: var(--red); } .toast.ok { border-color: var(--green); }
+
+.empty { text-align: center; padding: 28px 12px; color: var(--muted); }
+
+.seg { display: flex; background: var(--card2); border-radius: 12px; padding: 3px; }
+.seg button { flex: 1; padding: 7px; border-radius: 10px; font-weight: 600; font-size: 13px; color: var(--muted); } .seg button.active { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0, 0, 0, .3); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13.5px; } .kv b { color: var(--muted); font-weight: 500; }
+
+.people { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* apps launcher */
+
+.search { position: fixed; inset: 0; z-index: 45; background: rgba(5, 6, 10, .6); display: flex; justify-content: center; align-items: flex-start; padding: 12vh 16px; }
+.search .box { width: 100%; max-width: 560px; background: var(--bg2); border: 1px solid var(--line2); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
+.search input { width: 100%; padding: 14px 16px; background: transparent; border: 0; outline: none; font-size: 16px; }
+.search .res { max-height: 50vh; overflow: auto; border-top: 1px solid var(--line); }
+.search .res .item { padding: 10px 14px; cursor: pointer; } .search .res .item:hover, .search .res .item.hl { background: var(--card2); }
+
+/* desktop: rail + two columns */
+@media (min-width: 900px) {
+  body { padding-bottom: 24px; padding-left: var(--rail-w); font-size: 15.5px; }
+  .topbar { padding-left: 28px; }
+  main { max-width: 1180px; padding: 0 28px 40px; }
+
+  nav.tabs { top: 0; bottom: 0; left: 0; right: auto; width: var(--rail-w); height: 100vh; height: 100dvh; flex-direction: column; justify-content: flex-start; padding: 88px 12px 20px; gap: 4px; border-top: 0; border-right: 1px solid var(--line); background: var(--ink); backdrop-filter: none; }
+  nav.tabs button { flex: 0 0 auto; flex-direction: row; justify-content: flex-start; gap: 12px; padding: 10px 12px; border-radius: 10px; font-size: 14px; width: 100%; }
+  nav.tabs button.active { background: var(--orange-soft); }
+  nav.tabs button svg { width: 20px; height: 20px; }
+  nav.tabs::before { content: "Calamansi"; position: absolute; top: 26px; left: 24px; font-weight: 800; font-size: 18px; letter-spacing: -.02em; color: var(--text); }
+  nav.tabs::after { content: "1–5 tabs · / search · a add to list · ? all shortcuts"; position: absolute; bottom: 18px; left: 24px; right: 12px; color: var(--dim); font-size: 11.5px; line-height: 1.4; }
+  .topbar .brand { display: none; }
+  .sheet { border-radius: 20px; max-width: 640px; margin-bottom: 4vh; }
+  .sheet-bg { align-items: center; }
+}
+
+/* ═══════════════ Mind ═══════════════
+   Space (a dark nebula card), neuron/tree (branches, nodes, leaves), and breath (slow scale + glow).
+   Everything animates with transform/opacity/stroke-dashoffset only; reduced-motion switches it all off (rule near the top). */
+:root { --breath: 6.4s; --nebula: radial-gradient(90% 70% at 15% 0%, rgba(255,122,26,.20), transparent 60%), radial-gradient(80% 80% at 100% 100%, rgba(142,155,255,.18), transparent 60%), radial-gradient(60% 50% at 60% 40%, rgba(127,250,238,.07), transparent 70%); }
+:root[data-theme="light"] { --nebula: radial-gradient(90% 70% at 15% 0%, rgba(255,122,26,.14), transparent 60%), radial-gradient(80% 80% at 100% 100%, rgba(120,130,255,.12), transparent 60%); }
+@keyframes breathe { 0%, 100% { transform: scale(1); opacity: .85; } 50% { transform: scale(1.07); opacity: 1; } }
+@keyframes twinkle { 0%, 100% { opacity: .15; } 50% { opacity: .65; } }
+@keyframes flow { from { stroke-dashoffset: 96; } to { stroke-dashoffset: 0; } }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes pop { 0% { transform: scale(.4); opacity: 0; } 60% { transform: scale(1.18); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes ripple { from { transform: scale(.6); opacity: .55; } to { transform: scale(2.2); opacity: 0; } }
+@keyframes drift { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes fireaway { to { opacity: 0; transform: translateX(14px) scale(.98); } }
+
+.seg.wrap { flex-wrap: wrap; gap: 3px; } .seg.wrap button { flex: 0 0 auto; padding: 6px 11px; }
+.seg.wrap button.active { box-shadow: inset 0 0 0 1.5px var(--c, var(--orange)); }
+
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; } .row.end { margin-top: 14px; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin: -4px 0 10px; } .check input { width: auto; }
+
+.card.warn { border-color: var(--orange); } .late { color: var(--red); } .ok { color: var(--green); }
+.banner.ok { background: var(--green-soft); border-color: var(--green); color: var(--text); }
+
+/* space card */
+.card.space { position: relative; overflow: hidden; background: var(--nebula), var(--card); border-color: var(--line2); box-shadow: var(--shadow); }
+
+.card.space h2 { margin: 2px 0 0; font-size: 22px; letter-spacing: -.02em; } .card.space h3 { margin: 2px 0 6px; font-size: 19px; }
+
+/* the tree */
+
+/* rings, bars, heat, radar, spark */
+
+/* lists */
+
+.tick { flex: none; width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--c, var(--orange)); display: grid; place-items: center; position: relative; transition: background .2s, transform .15s; } .tick:active { transform: scale(.88); }
+.tick i { width: 12px; height: 7px; border-left: 2.5px solid #14100a; border-bottom: 2.5px solid #14100a; transform: rotate(-45deg) scale(0); margin-top: -3px; transition: transform .2s cubic-bezier(.3,1.6,.5,1); } .tick.on { background: var(--c, var(--orange)); } .tick.on i { transform: rotate(-45deg) scale(1); }
+.tick.on::after { content: ""; position: absolute; inset: -2px; border-radius: 50%; border: 2px solid var(--c, var(--orange)); animation: ripple .7s ease-out 1; pointer-events: none; }
+
+/* capture */
+.capture { margin-bottom: 14px; }
+
+/* aims, methods, year, inbox, received */
+
+.method { text-align: left; background: var(--card2); border: 1px solid var(--line); border-radius: 14px; padding: 11px 12px; display: grid; gap: 2px; transition: border-color .2s, transform .15s; } .method:hover { border-color: var(--orange); } .method:active { transform: scale(.98); } .method b { font-size: 14px; } .method small { color: var(--orange2); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; } .method span { color: var(--muted); font-size: 12.5px; }
+
+ .q { padding: 3px 10px; border-radius: 999px; border: 1.5px solid var(--line2); font-size: 11px; font-weight: 700; color: var(--dim); } .q.on { background: var(--orange-soft); border-color: var(--orange); color: var(--orange2); } .q.now { box-shadow: 0 0 0 3px var(--orange-soft); }
+
+ .empty.small { padding: 12px 6px; font-size: 13px; }
+.inbox { border-color: color-mix(in srgb, var(--cyan) 50%, var(--line)); }
+
+/* breathing exercise */
+
+@keyframes orb { 0% { transform: scale(.6); } 40% { transform: scale(1.35); } 100% { transform: scale(.6); } }
+
+@media (max-width: 360px) { .grid2 { grid-template-columns: 1fr; } }
+
+/* Library, notes, jump-in actions */
+
+.cover { flex: none; width: 40px; height: 56px; border-radius: 7px; object-fit: cover; background: var(--card2); box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+ .rate { color: #ffc857; font-weight: 700; font-size: 13px; flex: none; }
+
+ .act { padding: 5px 11px; border-radius: 999px; border: 1.5px solid color-mix(in srgb, var(--c, var(--orange)) 70%, transparent); font-size: 12px; font-weight: 600; color: var(--text); background: color-mix(in srgb, var(--c, var(--orange)) 10%, transparent); transition: transform .12s, background .2s; } .act:hover { background: color-mix(in srgb, var(--c, var(--orange)) 22%, transparent); } .act:active { transform: scale(.95); } .act small { color: var(--muted); font-weight: 500; }
+
+/* reading */
+
+/* Library: filters, analysis notes */
+
+/* Apps: constellation */
+
+.how summary { cursor: pointer; font-weight: 700; margin-bottom: 6px; }
+
+/* Mind overview: dashboard */
+
+.day .empty { padding: 6px 0; }
+
+/* Today: shift progress, next-up, quiet MCI, shift board */
+
+ 
+
+/* ───── Mind: section switcher (replaces the crowded strip) ───── */
+
+@keyframes ml-in { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }
+
+/* ───── Work: segments, overlap view ───── */
+
+.cal .day .with { color: var(--orange2); }
+
+/* ───── Home chores ───── */
+.chore .ch-ic, .ch-ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 21px; background: var(--card2); flex: none; } .ch-ic.sm { width: 32px; height: 32px; font-size: 17px; }
+
+/* ───── Social ───── */
+
+ .chip.late { color: var(--red, #ff6b6b); }
+
+/* ───── People directory, nurses ───── */
+.dir-search { flex: 1; width: 100%; background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+.dir-item { gap: 10px; align-items: center; }
+
+ .chip.pull { color: var(--orange2); background: var(--orange-soft); margin: 0 0 8px; display: inline-flex; }
+
+/* ───── individual rota + roster grid */
+
+/* ───── labor law card */
+
+/* ───── career */
+
+/* ───── month report / leave planner */
+
+/* ───── social plans: polls, wishlist, treats */
+
+/* ───── Today: briefing, wind-down, rating, study */
+
+.rate{margin-top:10px}
+
+/* working-but-free-around-it: striped, with the shift letter, so it never reads as a day off */
+
+/* ───── Who is free v2: shift letters, free-hours line, counts, badges */
+
+/* day timeline sheet */
+.dl{margin-top:10px}
+
+/* find a day */
+
+/* ───── schedule update briefs */
+
+/* ───── Today: folded lower-priority cards */
+
+/* ───────── Interfaces (Orange 8.12 pattern): data-ui = arcade | clean | paper, data-size = small | normal | large ───────── */
+/* text size scales the content, never the fixed bottom bar, rail or toasts: zooming body pushed them off a 320px screen (beta T09-17) */
+:root[data-size="small"] :is(main, .sheet, .search .box) { zoom: .92; } :root[data-size="large"] :is(main, .sheet, .search .box) { zoom: 1.12; }
+@media (max-width: 359px) { :root[data-size="large"] :is(main, .sheet, .search .box) { zoom: 1.05; } }
+/* Paper: light page, white cards, dark text (Bassiet tokens) */
+:root[data-ui="paper"] { --ink: #F3F4F9; --bg: #F3F4F9; --bg2: #FFFFFF; --card: #FFFFFF; --card2: #F7F8FC; --line: #C6CCDC; --line2: #B3BACD; --text: #15182A; --muted: #566079; --dim: #5E667D;
+  --day: #8a5d00; --day-soft: rgba(217, 154, 0, .16); --cyan: #08766b; --cyan-soft: rgba(8, 118, 107, .12); --green: #177a42; --green-soft: rgba(23, 122, 66, .12); --night: #4656d6; --eve: #7d3fc8; --red: #c4283a; --red-soft: rgba(196, 40, 58, .1);
+  --orange: #F28A1B; --orange2: #A24B00; --orange-soft: rgba(242, 138, 27, .14); --shadow: 0 6px 18px rgba(21, 24, 42, .08); color-scheme: light; }
+:root[data-ui="paper"] .topbar { background: linear-gradient(var(--bg) 75%, transparent); }
+
+/* Arcade: the family's 8-bit look — pixel headings and numbers, square notched panels, 2px borders, hard shadows, no blur or gradients */
+:root[data-ui="arcade"] { --bg: #12141F; --ink: #0d0f18; --bg2: #171a28; --card: #1B1E2D; --card2: #23273a; --line: #383E57; --line2: #4a5170; --text: #ECEEF7; --muted: #9CA3BE; --dim: #8D94AF;
+  --orange: #FFA040; --orange2: #FFB566; --orange-soft: rgba(255, 160, 64, .16); --r: 4px; --rs: 4px; --shadow: 0 2px 0 #000;
+  --font: "Source Sans 3", system-ui, sans-serif; --pixel: "Pixelify Sans", "Source Sans 3", monospace; --mono: "JetBrains Mono", ui-monospace, monospace; }
+:root[data-ui="arcade"] body { font-size: 15.5px; }
+:root[data-ui="arcade"] .card { border-width: 2px; box-shadow: 0 2px 0 #000; background-image: none !important;
+  border-radius: 0; box-shadow: inset 0 -3px 0 rgba(0, 0, 0, .28);
+  /* a one-pixel-step notch exactly as wide as the border: the 2px edges meet at a missing corner pixel, no detached stubs (beta T09-16) */
+  clip-path: polygon(0 2px, 2px 2px, 2px 0, calc(100% - 2px) 0, calc(100% - 2px) 2px, 100% 2px, 100% calc(100% - 2px), calc(100% - 2px) calc(100% - 2px), calc(100% - 2px) 100%, 2px 100%, 2px calc(100% - 2px), 0 calc(100% - 2px)); }
+:root[data-ui="arcade"] h1, :root[data-ui="arcade"] h2, :root[data-ui="arcade"] .card.hero .big, :root[data-ui="arcade"] .topbar .brand, :root[data-ui="arcade"] .lw-stats b, :root[data-ui="arcade"] .cr-grid b,
+:root[data-ui="arcade"] .pr-stats b, :root[data-ui="arcade"] .of-score b, :root[data-ui="arcade"] .wd .n, :root[data-ui="arcade"] .sg-n, :root[data-ui="arcade"] .wk-hours b { font-family: var(--pixel); letter-spacing: 0; font-weight: 700; }
+:root[data-ui="arcade"] .title, :root[data-ui="arcade"] .tiny, :root[data-ui="arcade"] .chip, :root[data-ui="arcade"] .tm-lab { font-family: var(--mono); letter-spacing: 0; }
+:root[data-ui="arcade"] .btn { border-radius: 4px; border: 2px solid var(--line2); box-shadow: 0 2px 0 #000; }
+:root[data-ui="arcade"] .btn:active { transform: translateY(2px); box-shadow: none; }
+:root[data-ui="arcade"] .btn.primary { border-color: #b35f00; }
+:root[data-ui="arcade"] .chip, :root[data-ui="arcade"] .seg, :root[data-ui="arcade"] .seg button, :root[data-ui="arcade"] input, :root[data-ui="arcade"] select, :root[data-ui="arcade"] textarea { border-radius: 4px; }
+:root[data-ui="arcade"] .topbar .brand .dot { border-radius: 0; box-shadow: none; background: var(--orange); }
+:root[data-ui="arcade"] .card.hero { background: var(--card) !important; }
+
+/* interface picker */
+.ui-opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+.ui-opt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 8px; border-radius: 12px; border: 2px solid var(--line); background: var(--card2); text-align: left; }
+.ui-opt.sel { border-color: var(--orange); } .ui-opt small { font-size: 10.5px; color: var(--muted); }
+.ui-thumb { position: relative; display: block; width: 100%; height: 54px; border-radius: 8px; margin-bottom: 4px; overflow: hidden; }
+.ui-thumb i { position: absolute; left: 8px; right: 8px; height: 12px; } .ui-thumb i:first-child { top: 8px; } .ui-thumb i:nth-child(2) { top: 26px; right: 30px; }
+.ui-thumb b { position: absolute; right: 8px; bottom: 6px; font-size: 13px; }
+.ui-arcade { background: #12141F; } .ui-arcade i { background: #1B1E2D; border: 2px solid #383E57; box-shadow: 0 2px 0 #000; } .ui-arcade b { font-family: "Pixelify Sans", monospace; color: #FFA040; }
+.ui-clean { background: #0f1117; } .ui-clean i { background: #1a1e2b; border-radius: 6px; } .ui-clean b { color: #ffa052; }
+.ui-paper { background: #F3F4F9; border: 1px solid #C6CCDC; } .ui-paper i { background: #fff; border: 1px solid #C6CCDC; border-radius: 6px; } .ui-paper b { color: #A24B00; }
+
+/* ───────── Cockpit: who's with me + week hours in the hero; three columns on wide screens ───────── */
+
+/* inside a cockpit column everything stacks: the calendar gets the full column width */
+
+/* — from D01: Today hero, Who's in, me picker, restore, sheets — */
+/* Today hero, Who's in, who-is-me picker, restore, sheets as dialogs (merged into app.css at the end) */
+
+/* sheets: the page behind stops scrolling; the dialog box takes focus without a ring */
+html.sheet-open, html.sheet-open body { overflow: hidden; }
+.sheet:focus { outline: none; }
+.sheet:focus-visible { outline: 2px solid var(--orange); outline-offset: -2px; }
+
+/* hero */
+
+/* week strip: real buttons; days of a month with no rota are hatched "?" */
+
+.cal .day[role=button]:focus-visible { outline: 2px solid var(--orange); outline-offset: 1px; }
+
+/* Who's in: bars that started yesterday are hatched; midnight gets a stronger tick */
+
+/* "Which one is you?" */
+
+/* first run */
+
+/* restore preview */
+.rs-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+.rs-cols .card { margin: 0; }
+.rs-in { border-color: var(--orange); }
+
+/* person sheet: days together are tappable */
+
+/* very narrow phones: keep the dial beside the words */
+
+/* Arcade: square corners, hard borders */
+
+/* — from D02: People directory, person month, roster grid — */
+/* People directory, contact form, a person's month, roster grid. Colours only from the theme variables. */
+
+/* ── contact form: live check under each field */
+
+.field input[aria-invalid] { border-color: var(--red); }
+
+/* ── directory */
+
+.dir-item .name.row { gap: 6px; flex-wrap: nowrap; min-width: 0; }
+
+.dir-item .meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 360px) { .dir-item { gap: 8px; } }
+/* wide screens: two columns of rows instead of one 1300px stretched list */
+
+/* ── a person's month */
+
+/* shift colours (person's month and roster share them): D day, E evening, N night, A nurse A/A+/B+, L late (SF, A2), adm admin/HQ/off-site */
+
+/* site stripe: GP codes D1/N1 (Upper Village) vs D2/N2 (Lower Village) … */
+
+/* ── roster grid */
+
+/* ── Arcade: square corners, hard edges */
+:root[data-ui="arcade"] .pr-day, :root[data-ui="arcade"] .pr-stats > div, :root[data-ui="arcade"] .pr-detail, :root[data-ui="arcade"] .rg-scroll, :root[data-ui="arcade"] .rg-sw, :root[data-ui="arcade"] .dir-search { border-radius: 4px; }
+
+/* ── Paper: light surfaces need a little more ink in the tints */
+
+/* — from D03: Nurse posting buttons — */
+/* Team leaders now get only UPV/LPV (T04-10). Keep a fixed 4-slot grid so their two buttons line up under the UPV/LPV columns of the other rows
+   instead of sliding right under UPO/LPO, which would read as the wrong sites. Theme-neutral: layout only. */
+
+/* — from D04: Social free-days grid, friends, invites — */
+/* Social: free-days grid, find a day, friends, invites (merged into app.css at the end) */
+
+/* free-days grid: today gets its own pill (weekend dates stay orange text), the grid never overflows its card */
+
+/* day sheet: rows outside the free-together group are dimmed slightly, the band only sits on rows inside it */
+
+/* chips that need you: not linked, no match */
+.chip.warn { background: var(--red-soft); color: var(--red); border-color: color-mix(in srgb, var(--red) 40%, transparent); }
+button.chip { cursor: pointer; font: inherit; font-size: 12.5px; font-weight: 600; }
+
+.chip.sc-link, .chip.pull { margin: 0 0 8px; }
+
+/* rota row picker */
+
+/* friend editor: hints under fields, 5-week paint grid, shift hours */
+
+/* invite: one readable WhatsApp button per friend, in a wrapping grid */
+
+/* best times / find a day */
+
+/* Paper: the pill and warn chips need darker ink on light cards */
+
+:root[data-ui="paper"] .chip.warn { background: var(--red-soft); color: var(--red); }
+
+/* Arcade: hard edges like everything else */
+
+:root[data-ui="arcade"] .chip.warn { border-width: 2px; }
+
+/* — from D05: Polls, treats — */
+/* polls: "+1" badge for an option that ends after midnight, yes-count, past options faded */
+
+/* treats: planned (future) ones stand apart from the ones you brought */
+
+/* poll sheet: day on its own line, From / To / Add below, so native date+time pickers are never clipped at 390px */
+
+/* integrator: poll replies row (T08-28) */
+
+/* — from D06: Career — */
+/* Work → Career (merged into app.css at the end). Colours only from the theme variables, so Clean / Arcade / Paper all work. */
+
+/* Buttons that never cut their label; stacked on very small phones */
+
+/* Current job */
+
+/* Postings: a muted block, red only when it went badly (the chips carry that) */
+
+/* Work history: a proportional bar + legend that jumps to each card */
+
+/* Rating picker: – 1 2 3 4 5 */
+
+/* Sheets */
+
+/* Next job */
+
+/* Full terms: a fixed label column, long values read left-aligned instead of a squeezed right-aligned block */
+
+/* — from D07: Home chores — */
+/* Home chores (chores-ui.js). Only theme variables, so Clean / Arcade / Paper all follow. */
+
+/* long unbroken titles must wrap, never widen the layout viewport (T05-19) */
+
+/* Home list: dense grid on wide screens, one column on the phone */
+
+/* "Last done?" quick answer on a new chore */
+
+/* plan sheet: slots read left to right like the header (T05-15) */
+
+/* Today card */
+
+/* toast with Undo / It was yesterday: #toasts ignores pointers, the buttons must not */
+
+/* Arcade: square, hard-edged */
+
+/* Paper: light page, the soft red badge needs a firmer text colour */
+
+/* — from D08: Mind first run, undo toast, wide overview — */
+/* Mind: guided first run, undo toast, wide overview, Paper hero, small fixes. Uses theme tokens only. */
+
+/* ── guided start (first run) */
+
+/* kit chips: tap to choose */
+
+/* first run: what else is in Mind */
+
+/* hero without a score yet */
+
+/* "Today" card: tasks that are only coming up are labelled as such */
+
+/* capture hint: a warning chip */
+
+/* habit week dots: two-letter day names (Sa / Su) */
+
+/* reflection: editing today's entry */
+
+/* sliders follow the theme (wheel rows keep their area colour) */
+.sheet input[type=range], #view-mind input[type=range] { accent-color: var(--c, var(--orange)); }
+
+/* ── undo toast (util toast has no button; this one is tappable) */
+.toast.undo { pointer-events: auto; display: flex; align-items: center; gap: 14px; padding: 8px 8px 8px 14px; min-width: min(320px, 90vw); }
+
+/* ── wide overview: hero + capture | the day | tiles + insights */
+
+/* ── Arcade: hard edges for the new pieces */
+
+/* ── Paper: a calm ink hero, no starfield or nebula on a light card */
+:root[data-ui="paper"] .card.space, :root[data-ui="paper"] .card.guide { background: var(--card); border-color: var(--line); }
+
+:root[data-ui="paper"] .card.space::before, :root[data-ui="paper"] .card.guide::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--orange); opacity: .8; }
+
+/* tiles with nothing in them yet step back instead of shouting "0" */
+
+/* — from D09: Library, imports — */
+/* Library: empty shelf = one welcome card (T07-19) */
+
+/* Library: the year card's facts line wraps neatly */
+
+/* Connect: one Import picker, a row per service (T07-20) */
+
+/* Reading log: what will be logged (T07-24) */
+
+/* Arcade: hard edges on the new boxes */
+
+/* — from D10: Storage banners — */
+/* Storage banners (store-alerts.js): under the top bar, above content, below sheets (40) and toasts (50). */
+.d10-alerts { position: fixed; z-index: 35; left: 0; right: 0; top: calc(var(--sat, 0px) + 58px); display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0 16px; pointer-events: none; }
+.d10-alert { pointer-events: auto; width: 100%; max-width: 640px; display: grid; grid-template-columns: 28px 1fr 32px; gap: 10px; align-items: start;
+  background: var(--card2); color: var(--text); border: 1px solid var(--line2); border-left: 4px solid var(--orange); border-radius: 12px; padding: 10px 6px 10px 12px; box-shadow: var(--shadow); animation: fade .2s; }
+.d10-alert.err { border-left-color: var(--red); }
+.d10-ic { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 15px; background: var(--orange-soft); color: var(--orange); }
+.d10-alert.err .d10-ic { background: var(--red-soft); color: var(--red); }
+.d10-body { min-width: 0; }
+.d10-body b { display: block; font-size: 14px; line-height: 1.3; }
+.d10-text { font-size: 12.5px; line-height: 1.4; color: var(--muted); margin-top: 2px; overflow-wrap: anywhere; }
+.d10-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.d10-acts .btn { min-height: 36px; }
+.d10-x { width: 32px; height: 32px; border: 0; background: transparent; color: var(--muted); font-size: 20px; line-height: 1; border-radius: 8px; cursor: pointer; }
+.d10-x:hover, .d10-x:focus-visible { background: var(--card); color: var(--text); }
+@media (pointer: coarse) { .d10-acts .btn, .d10-x { min-height: 44px; min-width: 44px; } }
+:root[data-ui="arcade"] .d10-alert { border-radius: 4px; border-width: 2px; border-left-width: 4px; box-shadow: 0 2px 0 #000; }
+:root[data-ui="arcade"] .d10-ic { border-radius: 4px; }
+:root[data-ui="arcade"] .d10-x { border-radius: 4px; }
+:root[data-ui="paper"] .d10-alert { background: var(--card); box-shadow: var(--shadow); }
+
+/* — from D11: Work calendar, day sheet — */
+/* Work › Calendar, day sheet, correction sheet (merged into app.css at the end) */
+
+/* visible close for every sheet (beta T02-08): sticks to the top-right while the sheet scrolls */
+.sheet-x { float: right; position: sticky; top: 0; z-index: 3; margin: -6px -4px 0 8px; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 50%; border: 1px solid var(--line); background: var(--card); color: var(--muted); font-size: 15px; line-height: 1; cursor: pointer; }
+.sheet-x:hover { color: var(--text); border-color: var(--line2); }
+.sheet-x:focus-visible { outline: 2px solid var(--orange); outline-offset: 1px; }
+:root[data-ui="arcade"] .sheet-x { border-radius: 4px; border-width: 2px; box-shadow: 2px 2px 0 var(--line2); }
+
+/* toasts go above an open sheet instead of over its action row (beta T02-24) */
+html.sheet-open #toasts { top: calc(env(safe-area-inset-top, 0px) + 12px); bottom: auto; }
+
+/* calendar: a slim note above the grid says why days are "?" (no rota / not you / pick your row) */
+
+.cal .day .code.unk { color: var(--dim); font-weight: 700; background: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, var(--dim) 18%, transparent) 3px 5px); }
+.chip.unk { color: var(--dim); }
+/* past days step back; the selected ring only lives while its day sheet is open (beta T02-27) */
+.cal .day.past:not(.sel) { opacity: .55; }
+.cal .day.past:not(.sel):hover { opacity: .85; }
+/* the morning after your night: a night-coloured edge, so the off day doesn't look like a free one */
+
+/* site stripe under the code: 1 Upper Village, 2 Lower Village, 3/4 clinics, 5 SABIC */
+
+.cal .day .code[class*=" s"] { box-shadow: inset 0 -2px 0 var(--st, transparent); }
+
+/* Who shares your shift: the band lives in a copy of the rows' grid, so it lines up with the tracks (beta T02-09) */
+
+/* the key's swatches take the shift's own colour (a night is blue), and red = nobody else in (beta T02-28) */
+
+/* day sheet */
+
+/* Shift codes: one tidy row per legend line, hours on the right */
+
+/* — from D12: Labor law — */
+/* labor law card + sheet: theme colours instead of fixed reds/oranges so Paper stays readable */
+
+/* — from D13: Leave planner, swaps — */
+/* Leave planner: theme-aware flags and windows (no dark-only greys) */
+
+/* Even swaps in the cover sheet: each offered day carries its own shift-type colour */
+
+.sw-opt { align-items: center; }
+
+/* — from D14: Briefing, rating, study — */
+/* Briefing: Copy / Share sit at the bottom right */
+
+/* Rating row: the saved pick stays visible and changeable (T01-13) */
+
+/* Tonight */
+
+/* Sleep sheet: inline validation (T01-10) */
+
+.field input[aria-invalid="true"] { border-color: var(--red); }
+/* Study rows: buttons stay on one line at 320px */
+
+/* — from D15: Schedule update briefs — */
+/* Schedule update brief: aligned date column, theme colours instead of fixed greens/reds */
+
+/* — from D17: Apps constellation — */
+/* Apps constellation: token colours so Paper gets light discs instead of dark-theme mud (T09-13 for the stars), monograms
+   readable in every interface, staleness as a dashed ring instead of greyed-out emoji, sizes that scale with the rings. */
+
+/* one tab stop per app: the chips are the keyboard picker, so make focus obvious */
+
+/* — from D18: Nurses board — */
+/* Nurses board, "nurses with you", Today nurse lines (merged into app.css at the end)
+   Three looks used everywhere: CONFIRMED = solid green, HEARD = amber dashed with "?", GUESS = grey dotted, faint, "last time?". */
+:root { --tip-ink: #ffcf5c; --tip-soft: rgba(255, 207, 92, .16); --guess-ink: var(--muted); --guess-line: var(--line2); }
+:root[data-theme="light"], :root[data-ui="paper"] { --tip-ink: #8a5a00; --tip-soft: rgba(217, 154, 0, .14); --guess-line: #9aa1b5; }
+/* app.css used a fixed pale yellow: in Paper it was unreadable (T04-14) */
+
+.chip.guess, .btn.guess { background: transparent; color: var(--guess-ink); border: 1.5px dotted var(--guess-line); font-style: italic; }
+
+/* day nav + 7-day strip */
+
+/* layout: one column on the phone (order), two on wide screens */
+
+/* staffing card */
+
+/* site tiles */
+
+/* not confirmed list */
+
+/* posting sheet + paste sheet */
+
+/* nurses with you */
+
+/* Today + person sheet lines */
+
+/* Arcade: square, 2px, hard edges */
+
+/* — from D19: Plan tab — */
+/* Plan tab: weekly cockpit, day cards, blocks, Rules / Goals / Move sheets (merged into app.css at the end) */
+
+/* header: title, horizon and Regenerate on one line */
+
+/* week card */
+
+.chip.warn { background: var(--red-soft); color: var(--red); border-color: transparent; }
+
+/* stacked bar: done (solid) · accepted (half) · suggested (hatched) */
+
+/* strip: one cell per visible day */
+
+/* day cards: stacked on a phone, side by side when there is room */
+
+/* 24-hour ribbon with 6 / 12 / 18 ticks */
+
+/* rows: fixed (shift, sleep, events) and blocks */
+
+/* Today card */
+
+/* wide: Plan gets the room for its columns */
+@media (min-width: 1200px) { body:has(#view-plan.active) main { max-width: 1560px; } }
+
+/* sheets: Rules, Goals, Move — left-aligned labels, a grid that wraps at 320px, errors under the field */
+
+.sh-foot { gap: 8px; margin-top: 12px; position: sticky; bottom: calc(-20px - var(--sab, 0px)); background: var(--bg2); padding: 8px 0 12px; z-index: 1; }
+
+/* Arcade: square, hard edges */
+
+/* Paper: light page, keep bars and soft fills visible */
+
+/* — from D20: design system, accessibility, Apps / Settings / search — */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+kbd { display: inline-block; min-width: 22px; padding: 1px 7px; border-radius: 6px; border: 1px solid var(--line2); border-bottom-width: 2px; background: var(--card2); font-family: var(--mono, ui-monospace, monospace); font-size: 12px; text-align: center; }
+.kv.keys { grid-template-columns: max-content 1fr; gap: 8px 14px; align-items: center; margin-top: 10px; }
+/* toasts with one action (util.js toast(…, { action })) */
+.toast.act { pointer-events: auto; display: flex; align-items: center; gap: 12px; padding: 7px 7px 7px 14px; }
+.toast .t-btn { flex: none; border: 1px solid var(--orange); color: var(--orange2); font-weight: 700; font-size: 13px; padding: 6px 12px; border-radius: 9px; background: transparent; }
+/* rail: the date in the top bar, Settings as the last rail item; the phone bar keeps six tabs and the gear */
+.page-title { display: none; }
+nav.tabs .rail-only { display: none; }
+/* a two-column Today only once the hero has room for its dial (beta T09-20) */
+@media (min-width: 900px) {
+  .page-title { display: block; font-weight: 700; font-size: 15px; color: var(--muted); white-space: nowrap; }
+  nav.tabs .rail-only { display: flex; margin-top: auto; margin-bottom: 52px; }
+
+}
+
+/* Paper: the active tab and the brand orange as text need the darker orange (2.3:1 → 6:1, beta T10-25) */
+:root[data-ui="paper"] nav.tabs button.active { color: var(--orange2); }
+:root[data-ui="paper"] .card .title { color: var(--muted); }
+:root[data-ui="paper"] .chip.sel, :root[data-ui="paper"] .btn.primary { color: #1b1206; }
+/* touch: action buttons and segments at least 40px tall on phones, header icons 44px (beta T10-26) */
+@media (pointer: coarse) {
+  .btn.sm { min-height: 40px; } .btn.icon { width: 44px; height: 44px; }
+  .seg button { min-height: 38px; } .sheet-x { width: 36px; height: 36px; }
+}
+/* Apps: honest status, long text wraps, one chip row that wraps instead of hiding apps off-screen (beta T09-05, T09-22) */
+.ad-sum, .app-detail .meta, .app-detail .chip, .item .meta, .tester-out, .recv-m, .apps-today .name { overflow-wrap: anywhere; min-width: 0; }
+
+/* search: a keyboard palette */
+
+.search .res .item.hl { box-shadow: inset 3px 0 0 var(--orange); }
+/* hero: nurse guesses read as guesses; time ranges never break inside */
+
+:root[data-ui="arcade"] .search .box, :root[data-ui="arcade"] .toast, :root[data-ui="arcade"] kbd, :root[data-ui="arcade"] .t-btn { border-radius: 4px; border-width: 2px; }
+:root[data-ui="arcade"] .tm-pill, :root[data-ui="arcade"] .c-chip, :root[data-ui="arcade"] .ui-opt, :root[data-ui="arcade"] .week .wd, :root[data-ui="arcade"] .cal .day, :root[data-ui="arcade"] .sheet { border-radius: 4px; }
+:root[data-ui="arcade"] .sheet { border-width: 2px; }
+
+/* 320px: the brand and three 44px icons must fit in one row */
+@media (max-width: 360px) { .topbar { padding-left: 12px; padding-right: 8px; gap: 4px; } .topbar .btn.icon { width: 40px; height: 40px; } .topbar .brand { font-size: 16px; gap: 7px; } }
+
+/* Customise card (Settings) */
+.cz-sec { border-top: 1px solid var(--line, rgba(127,127,127,.25)); padding: 8px 0; }
+.cz-sec > summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; list-style: none; }
+.cz-sec > summary small { opacity: .65; }
+.cz-row { display: flex; align-items: center; gap: 6px; padding: 4px 0; min-width: 0; }
+.cz-row .grow { flex: 1; min-width: 0; }
+
+.cz-fixed { padding: 0 6px; }
+
+nav.tabs button[hidden] { display: none !important; }
+
+.back-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 10px; }
+
+.cal .day.logged::before { content: ""; position: absolute; left: 50%; bottom: 3px; width: 14px; height: 2px; margin-left: -7px; border-radius: 2px; background: var(--green, #5fd38d); opacity: .8; }
+
+/* ───────── Calamansi */
+
+/* ════════════ Calamansi identity (1.0): forest-ink, calamansi lime, pulp, leaf. The family keeps Manrope for reading and the
+   Arcade / Clean / Paper interfaces; Calamansi adds Fraunces for headings (a cookbook feel). */
+:root, :root[data-ui="clean"] {
+  --ink: #0b110d; --bg: #0f1612; --bg2: #141d17; --card: #18221b; --card2: #202c23; --line: #2c3a30; --line2: #3a4b3e;
+  --text: #f2f6ec; --muted: #b3c0ad; --dim: #98a692;
+  --orange: #9fd94a; --orange2: #c0ea83; --orange-soft: rgba(159, 217, 74, .15); --pulp: #f6b93b; --pith: #ffe7a8; --leaf: #4cc27a; --dusk: #8f7cff;
+  --green: #4cc27a; --green-soft: rgba(76, 194, 122, .15);
+  --display: "Fraunces", "Manrope", Georgia, serif;
+}
+:root[data-ui="paper"] {
+  --ink: #f6f8ef; --bg: #f6f8ef; --bg2: #fbfcf7; --card: #ffffff; --card2: #eff3e5; --line: #d9e1c8; --line2: #c6d1b0;
+  --text: #1c2414; --muted: #55624a; --dim: #5f6b55; --orange: #4f8f1f; --orange2: #3c7313; --orange-soft: rgba(79, 143, 31, .12); --pulp: #a66500; --pith: #7a5200; --leaf: #1f8a4c; --green: #1f8a4c; --green-soft: rgba(31, 138, 76, .1);
+}
+:root[data-ui="arcade"] { --bg: #101a13; --ink: #0a120c; --bg2: #142018; --card: #18261c; --card2: #203224; --line: #355040; --line2: #456852; --orange: #a8e05a; --orange2: #c6ee8e; --orange-soft: rgba(168, 224, 90, .16); --pulp: #ffc24d; --pith: #ffe7a8; --leaf: #5fd38d; }
+h1, h2, h3, .td-head h1, .pf-head h2 { font-family: var(--display); letter-spacing: -.02em; }
+h1 { font-weight: 800; font-size: 30px; line-height: 1.05; }
+:root[data-ui="arcade"] h3 { font-family: var(--pixel); }
+
+.topbar .brand { font-family: var(--display); font-weight: 800; letter-spacing: -.01em; }
+
+/* the ring: ten segments, each person in their own hue */
+
+/* Today */
+.td-head { margin: 4px 0 14px; } .td-head h1 { margin: 0; font-size: 40px; }
+
+.td-acts { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; } .td-acts .btn { flex: 1 1 auto; }
+
+/* friend rows */
+
+/* profile */
+
+/* outing extras */
+
+/* your year */
+
+/* wide screens: the deck of cards flows in two columns */
+@media (min-width: 1100px) { .td-acts .btn { flex: 0 1 auto; } }
+
+/* ════════════ 1.2: accents, bubbly shapes, density, avatars, faces controls, celebrations */
+:root[data-accent="calamansi"] { --orange: #9fd94a; --orange2: #c0ea83; --orange-soft: rgba(159, 217, 74, .15); }
+:root[data-accent="leaf"] { --orange: #4cc27a; --orange2: #86dca6; --orange-soft: rgba(76, 194, 122, .16); }
+:root[data-accent="pulp"] { --orange: #f6b93b; --orange2: #ffd27a; --orange-soft: rgba(246, 185, 59, .16); }
+:root[data-accent="mint"] { --orange: #4fd6b0; --orange2: #8ce6cc; --orange-soft: rgba(79, 214, 176, .16); }
+:root[data-accent="clementine"] { --orange: #ff6a3d; --orange2: #ff9a72; --orange-soft: rgba(255, 106, 61, .16); }
+:root[data-accent="sky"] { --orange: #4fb4ff; --orange2: #8ccdff; --orange-soft: rgba(79, 180, 255, .16); }
+:root[data-ui="paper"][data-accent="calamansi"] { --orange: #4f8f1f; --orange2: #3c7313; }
+:root[data-ui="paper"][data-accent="leaf"] { --orange: #1f8a4c; --orange2: #156b39; }
+:root[data-ui="paper"][data-accent="pulp"] { --orange: #b36b00; --orange2: #8a5200; }
+:root[data-ui="paper"][data-accent="mint"] { --orange: #0f8f70; --orange2: #0a6e56; }
+:root[data-ui="paper"][data-accent="clementine"] { --orange: #e2522a; --orange2: #c4401d; }
+:root[data-ui="paper"][data-accent="sky"] { --orange: #1f86d6; --orange2: #156bb0; }
+.btn.primary { color: #10180f; } :root[data-ui="paper"] .btn.primary, :root[data-accent="clementine"] .btn.primary, :root[data-accent="sky"] .btn.primary { color: #fff; }
+
+/* bubbly: everything rounder and softer, cards float a little, buttons squish when pressed */
+:root[data-shape="bubbly"]:not([data-ui="arcade"]) { --r: 26px; --rs: 16px; }
+:root[data-shape="bubbly"]:not([data-ui="arcade"]) .btn { border-radius: 999px; padding: 10px 16px; }
+:root[data-shape="bubbly"]:not([data-ui="arcade"]) .btn.sm { padding: 6px 12px; }
+:root[data-shape="bubbly"]:not([data-ui="arcade"]) input, :root[data-shape="bubbly"]:not([data-ui="arcade"]) select, :root[data-shape="bubbly"]:not([data-ui="arcade"]) textarea { border-radius: 16px; }
+:root[data-shape="bubbly"]:not([data-ui="arcade"]) .sheet { border-radius: 30px 30px 0 0; }
+:root[data-shape="bubbly"]:not([data-ui="arcade"]) .seg { border-radius: 999px; } :root[data-shape="bubbly"]:not([data-ui="arcade"]) .seg button { border-radius: 999px; }
+:root[data-shape="bubbly"]:not([data-ui="arcade"]) .card { box-shadow: 0 14px 30px -22px color-mix(in srgb, var(--orange) 70%, transparent), 0 1px 0 rgba(255, 255, 255, .03) inset; }
+
+:root[data-fun="on"] .btn:active, :root[data-fun="on"] .chip:active, :root[data-fun="on"] .td-face:active .ring, :root[data-fun="on"] .cw-d:active { transform: scale(.93); }
+:root[data-fun="on"] .btn, :root[data-fun="on"] .td-face .ring, :root[data-fun="on"] .cw-d { transition: transform .18s cubic-bezier(.3, 1.6, .5, 1); }
+
+/* compact: denser lists and cards */
+:root[data-density="compact"] .card { padding: 12px; margin-bottom: 10px; }
+ :root[data-density="compact"] .td-head h1 { font-size: 32px; }
+
+/* avatars inside rings */
+
+/* Today header with your face; faces controls */
+.td-head { display: flex; align-items: center; gap: 12px; }
+
+ .btn.sel { border-color: var(--orange); color: var(--orange2); }
+
+input[type=range] { width: 100%; accent-color: var(--orange); }
+
+/* face editor */
+
+.cz-accents { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+.cz-acc { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px 6px 6px; border-radius: 999px; background: var(--card2); border: 2px solid transparent; cursor: pointer; font-weight: 600; font-size: 13px; color: var(--text); }
+.cz-acc i { width: 20px; height: 20px; border-radius: 50%; background: var(--c); } .cz-acc.sel { border-color: var(--c); }
+
+/* celebrations */
+.confetti { position: fixed; z-index: 9999; width: 8px; height: 12px; border-radius: 2px; pointer-events: none; animation: pop 1s cubic-bezier(.2, .7, .3, 1) forwards; }
+@keyframes pop { 0% { transform: translate(-50%, -50%) rotate(0) scale(1); opacity: 1; } 100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy) + 80px)) rotate(var(--r)) scale(.8); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .confetti { display: none; } :root[data-fun="on"] .btn, :root[data-fun="on"] .td-face .ring { transition: none; } }
+
+/* — from D07: Home chores — */
+/* Home chores (chores-ui.js). Only theme variables, so Clean / Arcade / Paper all follow. */
+
+/* long unbroken titles must wrap, never widen the layout viewport (T05-19) */
+.chore .name, .ch-line .name, .ch-sheet h2, .ch-main { overflow-wrap: anywhere; min-width: 0; }
+.ch-main { flex: 1 1 0; }
+
+/* Home list: dense grid on wide screens, one column on the phone */
+.ch-lead { margin: 2px 0 10px; }
+.ch-sum { display: block; margin-top: 3px; color: var(--text); font-weight: 700; }
+.ch-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); margin-bottom: 10px; }
+.ch-grid > .card.chore { margin: 0; }
+.chore .ch-status { margin: 6px 0 8px; }
+.chore.st-late { border-color: color-mix(in srgb, var(--red) 40%, var(--line)); }
+.chore.st-plan { border-color: color-mix(in srgb, var(--green) 35%, var(--line)); }
+.chore.st-due { border-color: color-mix(in srgb, var(--orange) 35%, var(--line)); }
+
+/* "Last done?" quick answer on a new chore */
+.ch-ask { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0 0 10px; }
+.ch-ask .chip { padding: 4px 10px; font-size: 12.5px; }
+
+/* plan sheet: slots read left to right like the header (T05-15) */
+.ch-sheet .ch-intro { margin: 4px 0 12px; }
+.ch-slots .item.clickable { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--text); font: inherit; padding: 10px 2px; }
+.ch-slots .item.clickable:last-child { border-bottom: 0; }
+.ch-slots .item .name { font-variant-numeric: tabular-nums; }
+.ch-slots .item.unknown .name { color: var(--muted); }
+.ch-slots .item.unknown .chip.sel { background: transparent; color: var(--orange2); }
+.ch-gap { margin: 8px 0 0; }
+.ch-own { margin-top: 12px; }
+.ch-own > summary { cursor: pointer; color: var(--muted); font-weight: 600; font-size: 13px; padding: 4px 0; }
+.ch-own[open] > summary { margin-bottom: 8px; }
+.ch-err { color: var(--red); font-size: 12.5px; font-weight: 600; min-height: 0; margin: -4px 0 8px; }
+.ch-err:empty { display: none; }
+.ch-name-row { display: grid; grid-template-columns: 70px 1fr; gap: 10px; }
+.ch-name-row .field input { width: 100%; }
+
+/* Today card */
+.chores-today .ch-badge { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; color: var(--red); background: var(--red-soft); vertical-align: 2px; }
+.chores-today.has-late { border-color: color-mix(in srgb, var(--red) 35%, var(--line)); }
+.ch-line > .btn { flex: none; }
+
+/* toast with Undo / It was yesterday: #toasts ignores pointers, the buttons must not */
+.toast.ch-toast { display: flex; align-items: center; gap: 6px; pointer-events: auto; padding: 6px 6px 6px 14px; }
+.toast.ch-toast .btn { padding: 5px 9px; white-space: nowrap; color: var(--orange2); }
+
+/* Arcade: square, hard-edged */
+:root[data-ui="arcade"] .ch-ask .chip, :root[data-ui="arcade"] .chores-today .ch-badge { border-radius: 4px; }
+:root[data-ui="arcade"] .chores-today .ch-badge { border: 2px solid var(--red); background: transparent; }
+:root[data-ui="arcade"] .ch-slots .item.clickable { border-bottom-width: 2px; }
+
+/* Paper: light page, the soft red badge needs a firmer text colour */
+:root[data-ui="paper"] .chores-today .ch-badge { color: var(--red); background: var(--red-soft); }
+:root[data-ui="paper"] .toast.ch-toast .btn { color: var(--orange); }
+
+@media (max-width: 380px) { .toast.ch-toast { flex-wrap: wrap; } }
+
+/* ═══════════════ Calamansi: Kitchen, Shop, Life, Today ═══════════════ */
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 420px) { .grid3 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.chip.tiny-chip { padding: 1px 7px; font-size: 11px; margin-left: 6px; vertical-align: 1px; }
+.name, .kt-t, .sp-main .name { overflow-wrap: anywhere; }
+.sh-foot { margin-top: 12px; }
+.adv > summary { cursor: pointer; color: var(--muted); padding: 6px 0; }
+.late { color: var(--red); }
+.card.warn { border-color: color-mix(in srgb, var(--red) 45%, var(--line)); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* day kinds (shift chips) */
+.chip.kd { margin-left: 8px; vertical-align: 1px; font-size: 11.5px; }
+.chip.kd.D { background: var(--day-soft); color: var(--day); border-color: transparent; }
+.chip.kd.E { background: var(--eve-soft); color: var(--eve); border-color: transparent; }
+.chip.kd.N { background: var(--night-soft); color: var(--night); border-color: transparent; }
+.chip.kd.post { background: var(--night-soft); color: var(--muted); border-color: transparent; }
+.chip.kd.off { background: var(--green-soft); color: var(--green); border-color: transparent; }
+.chip.kd.leave { background: var(--red-soft); color: var(--red); border-color: transparent; }
+.chip.kd.unk { color: var(--dim); }
+
+/* Kitchen: the week */
+.kt-hero .title { margin-bottom: 4px; }
+.kt-batches { display: grid; gap: 8px; margin-top: 12px; }
+.kt-batch { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; border-radius: var(--rs); background: color-mix(in srgb, var(--pulp) 12%, transparent); border: 1px solid color-mix(in srgb, var(--pulp) 35%, transparent); }
+.kt-bi { font-size: 20px; line-height: 1.2; }
+.kt-day.today { border-color: color-mix(in srgb, var(--orange) 45%, var(--line)); }
+.kt-dayhead { margin-bottom: 6px; flex-wrap: wrap; }
+.kt-slots { display: grid; }
+.kt-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); min-height: 44px; }
+.kt-row:first-child { border-top: 0; }
+.kt-row.has { cursor: pointer; } .kt-row.has:hover .kt-t { color: var(--orange2); }
+.kt-row.cooked .kt-t { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--dim); }
+.kt-row.past { opacity: .55; }
+.kt-slot { flex: 0 0 96px; display: flex; flex-direction: column; line-height: 1.2; font-size: 13px; }
+.kt-slot b { font-weight: 700; }
+.kt-what { display: flex; align-items: center; gap: 8px; min-width: 0; flex-wrap: wrap; }
+.kt-ic { font-size: 18px; line-height: 1; } .kt-ic.lg { font-size: 26px; }
+.kt-t { font-weight: 600; }
+.kt-done { color: var(--green); font-weight: 800; font-size: 18px; }
+.kt-sug { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; text-align: left; padding: 6px 10px; border-radius: var(--rs); border: 1px dashed var(--line2); color: var(--muted); min-width: 0; }
+.kt-sug .kt-t { color: var(--text); font-weight: 600; opacity: .85; }
+.kt-sug:hover { border-color: var(--orange); }
+.kt-why { flex-basis: 100%; }
+@media (max-width: 380px) { .kt-slot { flex-basis: 74px; } }
+.kt-today .kt-slot { flex-basis: 88px; }
+
+/* plan proposal */
+.kt-plist { display: grid; gap: 10px; max-height: 52vh; overflow: auto; margin: 6px -4px; padding: 0 4px; }
+.kt-pdh { margin-bottom: 2px; font-weight: 600; }
+.kt-pick { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+.kt-pick input { width: 18px; height: 18px; accent-color: var(--orange); flex: none; }
+.kt-pick .kt-slot { flex-basis: 84px; font-weight: 600; }
+.kt-batchcard { padding: 10px 12px; display: grid; gap: 4px; }
+.kt-suggest { padding: 10px 12px; margin: 8px 0; border-color: color-mix(in srgb, var(--orange) 40%, var(--line)); }
+.kt-rrow { width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); color: var(--text); font: inherit; }
+
+/* recipes */
+.kt-tools .inp { flex: 1; min-width: 0; }
+.kt-rgrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); margin-bottom: 12px; }
+.kt-rgrid > .card { margin: 0; cursor: pointer; }
+.kt-rcard:hover { border-color: var(--line2); }
+.kt-rcard.cant { opacity: .7; }
+.kt-fav { color: var(--pulp); }
+.kt-mach { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip.mchip { font-weight: 600; font-size: 12px; }
+.chip.mchip.no { opacity: .5; }
+.kt-machines { display: grid; gap: 6px; margin: 10px 0; }
+.kt-m { display: grid; grid-template-columns: 28px 1fr auto auto; align-items: center; gap: 4px 10px; padding: 9px 12px; border-radius: var(--rs); background: var(--card2); border: 1px solid var(--line); }
+.kt-m.fast { border-color: var(--orange); background: var(--orange-soft); }
+.kt-m.no { opacity: .55; }
+.kt-mi { font-size: 18px; }
+.kt-heat, .kt-min { font-weight: 800; font-variant-numeric: tabular-nums; }
+.kt-heat { color: var(--pulp); }
+.kt-note { grid-column: 2 / -1; }
+.kt-h3 { margin: 14px 0 6px; }
+.kt-ing, .kt-steps { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.kt-ing li.have { color: var(--muted); }
+.kt-steps li { padding-left: 2px; }
+.kt-medits { display: grid; gap: 6px; margin: 6px 0 12px; }
+.kt-medit { display: grid; grid-template-columns: 24px 74px 90px 70px 1fr; gap: 6px; align-items: center; }
+.kt-medit.no { opacity: .7; }
+.kt-medit input, .kt-medit select { background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 8px; width: 100%; min-width: 0; color: var(--text); }
+@media (max-width: 520px) { .kt-medit { grid-template-columns: 24px 1fr 1fr 1fr; } .kt-medit input[aria-label$="note"] { grid-column: 2 / -1; } }
+.kt-flags { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 4px 0 10px; }
+.kt-flag { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; cursor: pointer; }
+.kt-flag input { width: 18px; height: 18px; accent-color: var(--orange); }
+textarea { font: inherit; }
+
+/* Shop: list and fridge */
+.sp-add { margin: 10px 0 12px; } .sp-add .inp { flex: 1; min-width: 0; }
+.sp-need { border-color: color-mix(in srgb, var(--orange) 40%, var(--line)); }
+.sp-cat .title { margin-bottom: 4px; }
+.sp-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+.sp-cat .sp-row:first-of-type, .sp-first .sp-row:first-of-type { border-top: 0; }
+.sp-main { cursor: pointer; min-width: 0; }
+.sp-tick { width: 28px; height: 28px; flex: none; border-radius: 9px; border: 2px solid var(--line2); display: grid; place-items: center; font-weight: 800; color: #10180f; }
+.sp-tick.on { background: var(--orange); border-color: var(--orange); }
+.sp-row.done .name { text-decoration: line-through; color: var(--muted); }
+.sp-cat.done { opacity: .85; }
+.chip.sp-left { font-variant-numeric: tabular-nums; }
+.chip.sp-left.soon { background: color-mix(in srgb, var(--pulp) 18%, transparent); color: var(--pulp); border-color: transparent; }
+.chip.sp-left.late { background: var(--red-soft); color: var(--red); border-color: transparent; }
+.sp-first { border-color: color-mix(in srgb, var(--pulp) 45%, var(--line)); }
+.sp-ideas { margin-top: 10px; display: grid; gap: 6px; }
+.sp-needlist { max-height: 52vh; overflow: auto; margin: 8px 0; }
+
+/* Life: bills and the car */
+.lf-list { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); margin-bottom: 12px; }
+.lf-list > .card { margin: 0; }
+.lf-ic { font-size: 24px; line-height: 1; width: 32px; text-align: center; }
+.lf-bill .ch-status { margin-top: 6px; }
+.lf-bill.st-late { border-color: color-mix(in srgb, var(--red) 40%, var(--line)); }
+.lf-bill.st-soon, .lf-bill.st-due { border-color: color-mix(in srgb, var(--pulp) 45%, var(--line)); }
+.ch-status { font-size: 12.5px; font-weight: 700; }
+.ch-status.late { color: var(--red); } .ch-status.due { color: var(--pulp); } .ch-status.plan { color: var(--green); } .ch-status.ok { color: var(--muted); font-weight: 600; }
+.lf-papers { display: grid; gap: 4px; margin-top: 10px; }
+.lf-paper { display: grid; grid-template-columns: 24px 1fr auto 56px; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 10px; background: var(--card2); font-size: 13.5px; }
+.lf-paper .tiny { text-align: right; }
+.lf-paper.soon { background: color-mix(in srgb, var(--pulp) 14%, var(--card2)); }
+.lf-paper.late { background: var(--red-soft); } .lf-paper.late b { color: var(--red); }
+
+/* Today */
+.td-head { margin: 4px 0 14px; } .td-head h1 { margin: 0 0 4px; font-size: 32px; }
+.td-day .title { margin-bottom: 2px; color: var(--orange2); }
+.td-shift { font-weight: 800; font-size: 20px; font-variant-numeric: tabular-nums; }
+.td-badge { font-size: 30px; line-height: 1; }
+.td-blocks { margin-top: 8px; display: grid; gap: 2px; }
+.td-line { padding: 6px 0; border-top: 1px solid var(--line); } .td-line:first-of-type { border-top: 0; }
+.td-acts .btn { flex: 1 1 auto; }
+.ch-sheet h2 { margin-bottom: 6px; }
+
+/* Arcade: square and hard-edged */
+:root[data-ui="arcade"] .kt-sug, :root[data-ui="arcade"] .kt-m, :root[data-ui="arcade"] .kt-batch, :root[data-ui="arcade"] .lf-paper, :root[data-ui="arcade"] .sp-tick, :root[data-ui="arcade"] .kt-medit input, :root[data-ui="arcade"] .kt-medit select { border-radius: 4px; }
+:root[data-ui="arcade"] .kt-heat, :root[data-ui="arcade"] .kt-min, :root[data-ui="arcade"] .td-shift { font-family: var(--pixel); font-weight: 700; }
+:root[data-ui="arcade"] .kt-m { border-width: 2px; }
+:root[data-ui="paper"] .sp-tick { color: #fff; }
+.td-head { display: block; }
+.kt-sug .kt-t, .kt-what .kt-t { flex: 1 1 0; min-width: 0; }
+.kt-what .chip.tiny-chip { margin-left: 0; }
+.card.td-acts { display: block; }

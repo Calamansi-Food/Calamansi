@@ -1,0 +1,11 @@
+{
+  "name": "calamansi",
+  "private": true,
+  "type": "module",
+  "version": "1.0.0",
+  "description": "Calamansi \u2014 Home, Kitchen & daily life: chores around your shifts, recipes with air-fryer, oven and microwave times, a meal planner for 12-hour days and nights, the fridge, the shopping list, bills and the car. A PWA with no build step.",
+  "scripts": {
+    "test": "bash test/all.sh",
+    "bump": "sh scripts-bump.sh"
+  }
+}

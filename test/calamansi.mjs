@@ -1,0 +1,166 @@
+// Calamansi's logic without a browser: your day from Mandarin's shifts.json, chores around shifts, recipes and the planner (quick on
+// day shifts, packed and batch-cooked for nights, light before sleep), the shopping list from meals, the fridge, bills, the car, the
+// hub file for Citrus, the migration from Citrus and the merge of two devices. Made-up data only. Run: node test/calamansi.mjs
+import * as R from '../docs/js/roster.js';
+import * as D from '../docs/js/day.js';
+import * as C from '../docs/js/chores.js';
+import * as K from '../docs/js/kitchen.js';
+import * as L from '../docs/js/life.js';
+import * as HUB from '../docs/js/hub.js';
+import * as MIG from '../docs/js/migrate.js';
+import * as CZ from '../docs/js/custom.js';
+import { mergeStates, sanitize } from '../docs/js/store.js';
+import { checkBackup } from '../docs/js/backup-check.js';
+import { checker } from './helpers-node.mjs';
+import { shifts, state } from './fixture.mjs';
+
+const { check, bad } = checker();
+const NOW = new Date(2026, 10, 16, 9, 30);   // Mon 16/11/2026 09:30 (TZ=Asia/Riyadh)
+const day = (n) => new Date(2026, 10, n), k = (n) => `2026-11-${String(n).padStart(2, '0')}`;
+const S0 = sanitize(JSON.parse(JSON.stringify(state)));
+const OWN = ['airfryer', 'oven', 'microwave'];
+
+console.log('your day from Mandarin');
+check(R.set(shifts, { keep: false }), 'shifts.json is accepted');
+check(D.dayKind(day(16)).kind === 'day' && D.dayKind(day(16)).long, 'a D1 day is a long day shift');
+check(D.dayKind(day(19)).kind === 'first-night' && D.dayKind(day(19)).stretch === 3, '19/11 is the first of three nights');
+check(D.dayKind(day(20)).kind === 'night' && D.dayKind(day(20)).afterNight, '20/11 is a night after a night');
+check(D.dayKind(day(22)).kind === 'postnight', '22/11 (off after the last night) is a day after a night');
+check(D.dayKind(day(25)).kind === 'leave' && D.dayKind(new Date(2026, 11, 20)).kind === 'unknown', 'leave, and days past the roster are unknown');
+const w19 = D.freeWindows(day(19)); check(w19.length === 1 && w19[0][0] >= 14 * 60 && w19[0][1] <= 20 * 60 - 90, `before a night only the afternoon is free (${w19.map(w => w.join('–'))})`);
+const w22 = D.freeWindows(day(22)); check(w22[0][0] >= 16 * 60, 'after the last night you sleep ~8 h before anything');
+
+console.log('chores');
+const lau = S0.chores.c1;
+const slots = C.suggestSlots(S0, lau, { now: NOW, count: 4 });
+check(slots.length > 0 && slots.every(x => !(x.key === k(19) && x.start + 120 > 20 * 60 - 90)), 'a 2-hour chore is never put right before a night');
+check(slots.every(x => !(x.after && x.start >= 20 * 60)), 'a 2-hour chore is not put after a 12-hour day');
+let s = C.markDone(S0, 'c1', k(16));
+check(s.chores.c1.lastDone === k(16) && s.chores.c1.hist.includes(k(16)) && s.chores.c1.next === null, 'done: last-done and history move on');
+s = C.moveDone(s, 'c1', k(16), k(15)); check(s.chores.c1.lastDone === k(15) && !s.chores.c1.hist.includes(k(16)), '“It was yesterday” moves the tick');
+check(C.doneSince(S0, k(15)) === 1 && C.doneSince(S0, k(1)) === 5, 'chores done since a date count every tick');
+check(C.dueSoon(S0, NOW).some(x => x.c.id === 'c1' && x.late === 2), 'laundry is two days late');
+
+console.log('recipes and ingredients');
+check(JSON.stringify(K.parseIngredient('1½ cups rice')) === JSON.stringify({ item: 'rice', qty: 1.5, unit: 'cup' }), 'fractions and units are read');
+check(K.parseIngredient('500g mince').qty === 500 && K.parseIngredient('٢ eggs').qty === 2, '“500g” and Arabic digits are read');
+check(K.parseIngredient('Salt').qty === 0 && K.parseIngredient('  ') === null, 'a plain item has no amount; blank is nothing');
+check(K.qtyText(1500, 'g') === '1.5 kg' && K.toBase(2, 'l')[0] === 2000, 'units convert both ways');
+check(K.normName('Tomatoes') === K.normName('tomato') && K.normName('dates') === 'date', 'plurals compare');
+const thighs = S0.recipes.r0;
+check(K.usable(thighs, OWN)[0][0] === 'airfryer' && K.quickest(thighs, OWN) === 25, 'the air fryer is the quickest machine for thighs');
+check(!K.cookable(S0.recipes.r5, ['airfryer']) && K.cookable(S0.recipes.r5, ['stove']), 'lentil soup needs the hob (or reheats in the microwave)');
+check(K.STARTERS.every(r => Object.keys(r.machines).length === 0 || Object.values(r.machines).every(m => m.mins)), 'every starter machine has a time');
+check(K.STARTERS.every(r => Object.entries(r.machines).every(([m, x]) => m === 'microwave' || m === 'stove' || (x.temp >= 150 && x.temp <= 230))), 'oven and air-fryer temperatures are sane (150–230 °C)');
+check(Object.keys(K.validateRecipe({ title: '', machines: { oven: { temp: 900 } } })).length === 2, 'the editor refuses a nameless recipe and a 900 °C oven');
+const clean = K.cleanRecipe({ title: 'X', ingredients: ['2 x eggs', null, 7], machines: { oven: { temp: '200', mins: '15' }, toaster: { mins: 3 } } });
+check(clean.ingredients.length === 1 && clean.machines.oven.temp === 200 && !clean.machines.toaster, 'recipes are cleaned (bad lines and unknown machines dropped)');
+
+console.log('the planner');
+const plan = K.planWeek(S0, { from: NOW, days: 7, owned: OWN, now: NOW });
+const d16 = plan.days[0], d19 = plan.days.find(d => d.key === k(19)), d20 = plan.days.find(d => d.key === k(20));
+check(d16.slots.map(x => x.slot).join() === 'breakfast,lunch,dinner' && d16.slots[1].need === 'pack', 'a day shift: breakfast, a packed lunch, dinner');
+check(d16.slots[0].past, 'breakfast at 07:00 is already past at 09:30');
+check(d16.slots[2].meal?.id === 'm1', 'your own planned dinner is kept');
+const quick = d16.slots.concat(plan.days[1].slots).filter(x => x.need === 'quick' && x.pick).map(x => K.quickest(S0.recipes[x.pick.recipeId], OWN));
+check(quick.length && quick.every(m => m <= 25), `quick slots after a 12-hour day get quick recipes (${quick} min)`);
+check(d19.slots.map(x => x.slot).join() === 'lunch,dinner,night', 'a first night: lunch, dinner before the shift, a packed night meal');
+check(d20.slots[0].slot === 'sleep' && d20.slots[0].pick && S0.recipes[d20.slots[0].pick.recipeId].light, 'after a night: something light before sleep');
+const b = plan.batches.find(x => x.forKeys.includes(k(19)));
+check(b && b.portions === 3 && b.forKeys.join() === [k(19), k(20), k(21)].join(), `one batch cook for the three nights (${b?.key})`);
+check(b && S0.recipes[b.recipeId].batch, 'the batch is a batch recipe');
+check([19, 20, 21].every(n => plan.days.find(d => d.key === k(n)).slots.find(x => x.slot === 'night').pick?.fromBatch), 'each night meal comes from the batch');
+check(plan.days.flatMap(d => d.slots).filter(x => x.pick).every(x => !/greek yogurt/.test((x.pick.why || []).join())), 'yogurt past its date is never “used up” in a plan');
+check(!plan.days.find(d => d.key === k(21)).slots.some(x => x.pick && /thighs before/.test((x.pick.why || []).join())), 'food is only planned around before its date');
+const ap = K.applyPlan(S0, plan);
+const bm = Object.values(ap.state.meals).find(m => m.batch);
+check(ap.ids.length > 10 && bm && bm.servings === 4, `the plan is saved (${ap.ids.length} meals; the batch cooks 4 portions)`);
+check(Object.values(ap.state.meals).filter(m => m.fromBatch === bm.id).length === 3, 'the three night meals point at the batch');
+check(ap.state.meals.m1.recipeId === 'r1' && Object.values(ap.state.meals).filter(m => m.date === k(16) && m.slot === 'dinner').length === 1, 'your own dinner is not replaced or doubled');
+const ap2 = K.applyPlan(ap.state, K.planWeek(ap.state, { from: NOW, days: 7, owned: OWN, now: NOW }));
+check(ap2.ids.length === 0, 'planning again adds nothing to a full week');
+
+console.log('shopping and the fridge');
+const need = K.neededFor(ap.state, k(16), k(22));
+check(need.length > 3 && need.every(n => !K.STAPLE.test(n.name)), `the week needs ${need.length} things, no salt or oil`);
+check(!need.some(n => /basmati/i.test(n.name)), 'rice is in the cupboard: not on the list');
+const s1 = K.addMeal(K.addMeal(S0, { id: 'x1', date: k(23), slot: 'dinner', recipeId: 'r1', servings: 4 }), { id: 'x2', date: k(24), slot: 'dinner', recipeId: 'r1', servings: 2 });
+const salmon = K.neededFor(s1, k(23), k(24)).find(n => /salmon/.test(n.name));
+check(salmon && salmon.qty === 6, `servings scale the amounts (salmon ×${salmon?.qty})`);
+const s2 = K.addNeeded(s1, [salmon]), s3 = K.addNeeded(s2, [{ ...salmon, qty: 2 }]);
+check(K.openShop(s3).filter(x => /salmon/.test(x.name)).length === 1 && K.openShop(s3).find(x => /salmon/.test(x.name)).qty === 8, 'the same thing again grows the row instead of adding one');
+check(K.neededFor(s3, k(23), k(24)).every(n => !/salmon/.test(n.name)), 'what is on the list is not needed again');
+let f = K.boughtToPantry(K.updateShop(S0, 's1', { done: true }), 's1', NOW);
+const milk = Object.values(f.pantry).find(x => x.name === 'Milk');
+check(milk && milk.qty === 2 && milk.unit === 'l' && milk.expires === k(23), 'bought milk goes to the fridge with a week’s best-before');
+check(K.boughtToPantry(S0, 's2', NOW) === S0, 'bin bags do not go in the fridge');
+check(K.useFirst(S0, NOW).map(x => x.id).join() === 'p3,p2', 'use first: the yogurt (past) then the chicken (tomorrow); the freezer never');
+const taken = K.takeFrom(S0, 'chicken thighs', 300, 'g');
+check(taken.pantry.p2.qty === 200, 'cooking takes 300 g out of 500 g');
+check(!K.takeFrom(S0, 'basmati rice', 2500, 'g').pantry.p4, 'taking more than there is empties the row');
+let c1 = K.cookMeal(ap.state, bm.id, day(19));
+const left = Object.values(c1.pantry).find(x => x.fromMeal === bm.id);
+check(left && left.qty === 3 && left.unit === 'portions', 'the batch leaves 3 portions in the fridge');
+const nightMeal = Object.values(c1.meals).find(m => m.fromBatch === bm.id);
+c1 = K.cookMeal(c1, nightMeal.id, day(19));
+check(Object.values(c1.pantry).find(x => x.fromMeal === bm.id).qty === 2, 'eating a packed night meal takes one portion out');
+check(K.uncook(c1, nightMeal.id).meals[nightMeal.id].cooked === undefined, 'a meal can be un-cooked');
+
+console.log('bills and the car');
+check(L.addMonths('2026-01-31', 1) === '2026-02-28' && L.addMonths('2026-11-16', 12) === '2027-11-16', 'months add like a calendar');
+check(L.billsDue(S0, NOW).map(b => b.id).join() === 'b2,b1', 'rent (overdue) and electricity (in 2 days) are due; the subscription is not yet');
+const paid = L.payBill(S0, 'b2', NOW);
+check(paid.bills.b2.due === '2026-12-14' && paid.bills.b2.paid.includes(k(16)), 'paying rent moves it to next month and logs it');
+const once = L.payBill(L.saveBill(S0, { id: 'o', title: 'Visa fee', every: 0, due: k(20) }), 'o', NOW);
+check(once.bills.o.done && !L.billsDue(once, NOW).some(b => b.id === 'o'), 'a one-off is finished once paid');
+check(L.monthly(S0) === 2850, 'about 2850 SAR a month');
+const sv = L.serviceDue(S0.cars.car1, NOW);
+check(sv.kmLeft === 800 && sv.due === k(20) && sv.byKm > sv.byDate, `the service is due by date first (${sv.byDate}; by km ${sv.byKm})`);
+const al = L.carAlerts(S0, NOW);
+check(al.some(a => a.kind === 'fahas' && a.days === 14) && al.some(a => a.kind === 'service' && a.days === 4) && !al.some(a => a.kind === 'istimara' || a.kind === 'insurance'), 'fahas and the service warn; insurance (34 days) and the istimara are not yet');
+const sv2 = L.serviced(S0, 'car1', { date: k(16), km: 49300 });
+check(sv2.cars.car1.lastServiceKm === 49300 && !L.carAlerts(sv2, NOW).some(a => a.kind === 'service'), 'a logged service resets the clock');
+
+console.log('status.json for Citrus');
+const st = HUB.buildStatus(S0, NOW);
+check(st.app === 'calamansi' && st.contract === 2 && st.url.startsWith('https://') && st.color && st.icon, 'contract v2 header');
+check(/chores? due/.test(st.summary) && /dinner: air-fryer salmon/.test(st.summary), `summary: "${st.summary}"`);
+check(st.summary.length <= 140 && st.pending.length <= 10 && st.inbox.length <= 25 && st.metrics.length <= 12 && st.actions.length <= 6, 'within the caps');
+check(st.inbox.some(i => i.id === `bill-b2-${k(14)}` && i.date === k(16) && i.type === 'task') && st.inbox.some(i => i.id === `car-car1-fahas-${k(30)}`), 'bills and car papers become dated tasks with stable ids');
+check(HUB.buildStatus(S0, NOW).inbox.map(i => i.id).join() === st.inbox.map(i => i.id).join(), 'the same day gives the same ids');
+check(st.asks.some(a => a.date === k(19) && /batch-cook/.test(a.title)), 'the batch cook is asked of Citrus');
+check(st.extra.chores.length && st.extra.meals.today.some(m => m.title === 'Air-fryer salmon with lemon') && st.extra.shopping.open === 2, 'extra: chores, meals, shopping for Citrus’s Today');
+check(st.metrics.find(m => m.key === 'meals-cooked-week').value === 1 && st.metrics.find(m => m.key === 'chores-week').value === 1, 'metrics: cooked and chores done this week (since Sunday)');
+check(!JSON.stringify(st).includes('Likes') && st.actions.every(a => a.url.startsWith(HUB.SITE_URL)), 'only its own links; no notes');
+
+console.log('taking over from Citrus');
+const citrus = { updatedAt: 1, rotas: { r: {} }, tasks: { t: { title: 'not home' } }, friends: { f: { name: 'x' } }, chores: { a: { title: 'Laundry', icon: '🧺', every: 4, mins: 120, lastDone: k(12), at: 5 }, b: { title: 'Ironing', every: 7, mins: 40, at: 5 }, bad: 'nope' }, deleted: { 'chore:z': Date.now() - 864e5, 'friend:f': Date.now() - 864e5 }, settings: { alarmPlan: 30 } };
+const mig = MIG.applyMigration(sanitize({ app: 'calamansi', chores: {}, settings: {} }), citrus);
+check(mig.changed && Object.keys(mig.state.chores).length === 2 && mig.state.chores.a.hist[0] === k(12), 'chores come over, with history from last-done');
+check(!mig.state.tasks && !mig.state.friends && !mig.state.rotas && mig.state.deleted['chore:z'] && !mig.state.deleted['friend:f'], 'nothing else of Citrus comes, only chore tombstones');
+check(mig.state.settings.alarmPlan === 30 && mig.state.migrated.counts.chores === 2, 'the alarm setting comes too; recorded');
+const again = MIG.applyMigration(mig.state, citrus);
+check(Object.keys(again.state.chores).length === 2, 'running it twice changes nothing');
+const mine = C.updateChore(mig.state, 'a', { title: 'Laundry (mine)' });
+check(MIG.applyMigration(mine, citrus).state.chores.a.title === 'Laundry (mine)', 'a newer local edit wins over Citrus');
+check(MIG.looksLikeCitrus(citrus) && !MIG.looksLikeCitrus(state), 'a Citrus backup is told apart from Calamansi’s own');
+
+console.log('storage and two devices');
+const dirty = sanitize({ recipes: { a: { title: 'ok', ingredients: 'x', machines: 'no' }, b: 'junk', c: {} }, meals: { m: { date: 'nope' }, n: { date: k(16), slot: 'dinner' } }, chores: { c: { title: 'x', hist: 'no' } } });
+check(dirty.recipes.a && Array.isArray(dirty.recipes.a.ingredients) && !Object.keys(dirty.recipes.a.machines).length && !dirty.recipes.b && !dirty.recipes.c, 'bad recipes are dropped or repaired');
+check(!dirty.meals.m && dirty.meals.n && Array.isArray(dirty.chores.c.hist), 'a meal without a day is dropped');
+const A = { ...S0, updatedAt: 10, recipes: { ...S0.recipes, rA: { id: 'rA', title: 'From phone', ingredients: [], steps: [], tags: [], at: 20 } } };
+const B = { ...S0, updatedAt: 11, pantry: { ...S0.pantry }, deleted: { 'food:p1': Date.now() } }; delete B.pantry.p1;
+const m = mergeStates(A, B);
+check(m.recipes.rA && !m.pantry.p1 && m.chores.c1, 'a recipe added on one device and food used on the other both stay');
+const C1 = { ...S0, updatedAt: 50, shopping: { ...S0.shopping, s1: { ...S0.shopping.s1, done: true, at: Date.parse('2026-11-16T07:00:00Z') } } };
+check(mergeStates(S0, C1).shopping.s1.done, 'the newer tick wins');
+
+console.log('backups and settings');
+check(checkBackup({ app: 'clementine', friends: {} }).ok === false, 'another app’s backup is refused');
+const cb = checkBackup({ ...S0, friends: { x: {} }, recipes: { ...S0.recipes, bad: 7 } });
+check(cb.ok && !cb.state.friends && !cb.state.recipes.bad && cb.dropped.length === 2 && cb.summary.counts.recipes === 16, 'a backup is cleaned before it is restored');
+const cz = CZ.custom({ settings: { custom: { kitchen: { machines: ['airfryer', 'laser'], days: 99 }, diet: { kcal: -5 }, tabs: { hidden: ['today', 'shop'] } } } });
+check(cz.kitchen.machines.join() === 'airfryer' && cz.kitchen.days === 7 && cz.diet.kcal === 0 && cz.tabs.hidden.join() === 'shop', 'settings are cleaned (unknown machines, odd numbers, Today always shown)');
+
+if (bad()) { console.log(`${bad()} check(s) FAILED`); process.exit(1); }
