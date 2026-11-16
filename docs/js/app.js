@@ -124,7 +124,7 @@ function quickAdd() {
 }
 
 // Arriving from another app or a link: ?from=citrus shows "← Citrus"; ?do=<action> (or #view) jumps straight there.
-const DO = { today: ['today'], chores: ['home'], home: ['home'], chore: ['home', 'new'], plan: ['kitchen', 'week'], kitchen: ['kitchen', 'week'], recipes: ['kitchen', 'recipes'], recipe: ['kitchen', 'new'], shop: ['shop', 'list'], list: ['shop', 'list'], add: ['shop', 'add'], fridge: ['shop', 'fridge'], bills: ['life', 'bills'], life: ['life', 'bills'], car: ['life', 'car'] };
+const DO = { today: ['today'], chores: ['home'], home: ['home'], chore: ['home', 'new'], plan: ['kitchen', 'week'], kitchen: ['kitchen', 'week'], recipes: ['kitchen', 'recipes'], recipe: ['kitchen', 'new'], shop: ['shop', 'list'], list: ['shop', 'list'], add: ['shop', 'add'], fridge: ['shop', 'fridge'], bills: ['life', 'bills'], life: ['life', 'bills'], car: ['life', 'car'], anatomy: ['life', 'anatomy'] };
 function handleIncoming() {
   try {
     const q = new URLSearchParams(location.search);
