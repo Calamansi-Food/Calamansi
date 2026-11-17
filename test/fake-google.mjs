@@ -40,6 +40,7 @@ export function createFakeGoogle({ email = 'tester@example.com' } = {}) {
     const par = /'([^']+)' in parents/.exec(q); if (par && !f.parents.includes(par[1])) return false;
     const nm = /name\s*=\s*'((?:[^'\\]|\\.)*)'/.exec(q); if (nm && f.name !== nm[1].replace(/\\'/g, "'")) return false;
     if (/mimeType\s*=\s*'application\/vnd\.google-apps\.folder'/.test(q) && !q.includes(' or ') && f.mimeType !== FOLDER) return false;
+    const tg = /appProperties has \{ key='([^']+)' and value='([^']+)' \}/.exec(q); if (tg && (f.appProperties || {})[tg[1]] !== tg[2]) return false;
     const nc = /name contains '([^']+)'/.exec(q);
     if (q.includes('spreadsheetml') || q.includes("contains '.xlsx'")) { if (!(f.mimeType.includes('spreadsheet') || /\.xlsx$/.test(f.name))) return false; }
     else if (nc && !f.name.includes(nc[1])) return false;
@@ -79,7 +80,7 @@ export function createFakeGoogle({ email = 'tester@example.com' } = {}) {
       for (const c of changes.filter(c => c.seq > from)) { if (seen.has(c.fileId)) continue; seen.add(c.fileId); const f = files.get(c.fileId); out.push(f ? { fileId: f.id, removed: false, file: meta(f) } : { fileId: c.fileId, removed: true }); }
       return json(route, 200, { changes: out, newStartPageToken: String(changeSeq) });
     }
-    if (p === '/drive/v3/files' && method === 'POST') { const m = JSON.parse(req.postData() || '{}'); const f = put(m.name, (m.parents || ['root'])[0], Buffer.alloc(0), m.mimeType || 'application/octet-stream'); return json(route, 200, { id: f.id }); }
+    if (p === '/drive/v3/files' && method === 'POST') { const m = JSON.parse(req.postData() || '{}'); const f = put(m.name, (m.parents || ['root'])[0], Buffer.alloc(0), m.mimeType || 'application/octet-stream'); if (m.appProperties) f.appProperties = { ...m.appProperties }; return json(route, 200, { id: f.id }); }
     let m;
     if ((m = /^\/drive\/v3\/files\/([^/]+)$/.exec(p)) && method === 'GET') {
       const f = files.get(m[1]); if (!f || f.trashed) return json(route, 404, { error: { message: 'File not found' } });
@@ -94,6 +95,7 @@ export function createFakeGoogle({ email = 'tester@example.com' } = {}) {
       if (rem) f.parents = f.parents.filter(x => !rem.split(',').includes(x));
       if (add) f.parents.push(...add.split(','));
       if (b.name) f.name = b.name;
+      if (b.appProperties) f.appProperties = { ...(f.appProperties || {}), ...b.appProperties };
       touch(f); return json(route, 200, { id: f.id });
     }
     if ((m = /^\/drive\/v3\/files\/([^/]+)\/export$/.exec(p))) { const f = files.get(m[1]); return f ? route.fulfill({ status: 200, body: f.content }) : json(route, 404, {}); }

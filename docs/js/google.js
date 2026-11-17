@@ -5,7 +5,8 @@
 // screen, but phones only let Google's window open inside a tap — so renewals happen on the next tap anywhere in the
 // app (see renewOnTap), never from a timer. The one-hour token lives in localStorage on this device only.
 //
-// Drive layout (HUB.md): My Apps/hub/calamansi/{state,status}.json · My Apps/hub/calamansi/backups/state-YYYY-MM-DD.json.
+// Drive layout (claude/drive-layout.md): Calamansi's folder is found by tag (citrusApp = calamansi); today My Apps/hub/calamansi,
+// later Citrus/Life/Home & Kitchen - Calamansi. Inside it: {state,status}.json · backups/state-YYYY-MM-DD.json.
 // Calamansi only READS other apps' files (mandarin/shifts.json for your shifts, citrus/state.json once for the migration,
 // citrus/plan.json for Plan's blocks);
 // it never writes into another app's folder, and never touches My Apps/Rotas (Mandarin's).
@@ -373,22 +374,70 @@ export async function changesSince(tokenStr, maxPages = 20) {
 }
 
 // ════════════════════════════════════════ the hub
+// Folders are found by tag, never by path (claude/drive-layout.md): every app folder carries appProperties.citrusApp = '<id>'.
+// Citrus moves and renames them into Citrus/…; Calamansi only follows the tag. Until a folder is tagged, the old path
+// My Apps/hub/<id> is the fallback; Calamansi's own folder is tagged as soon as it is found or made there.
 export const APP = 'calamansi';
-const P = (root) => ({ hub: [root, 'hub'], me: [root, 'hub', APP], backups: [root, 'hub', APP, 'backups'], other: (app) => [root, 'hub', app] });
+const P = (root) => ({ hub: [root, 'hub'], me: [root, 'hub', APP], other: (app) => [root, 'hub', app] });
+const tagInflight = new Map();
+
+/** Every folder tagged citrusApp = app, anywhere in My Drive, oldest first. */
+export async function taggedFolders(app) {
+  const p = new URLSearchParams({ q: `mimeType = '${FOLDER}' and trashed = false and appProperties has { key='citrusApp' and value='${q(app)}' }`, fields: 'files(id,name,parents,createdTime)', pageSize: '20', spaces: 'drive' });
+  const j = await gfetch(`${DRIVE}/files?${p}`);
+  return (j.files || []).sort((a, b) => (a.createdTime || '').localeCompare(b.createdTime || ''));
+}
+async function tagFolder(id, app) {
+  await gfetch(`${DRIVE}/files/${encodeURIComponent(id)}?fields=id`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ appProperties: { citrusApp: app } }) });
+}
+/** An app's folder: by tag first (the oldest if there are several), else the old path. Only Calamansi's own folder is ever
+ *  created (and tagged at once); another app's folder is read where its tag says, never made or tagged here. */
+export function appFolder(root, app, { create = app === APP } = {}) {
+  const key = `tag:${app}`, own = app === APP, flight = key + (create ? '+' : '');
+  if (tagInflight.has(flight)) return tagInflight.get(flight);
+  const p = (async () => {
+    if (ids[key] && await exists(ids[key])) return ids[key];
+    if (ids[key]) { delete ids[key]; persistIds(); }
+    const tagged = await taggedFolders(app);
+    let id = tagged[0]?.id || null;
+    if (!id) {
+      // nothing tagged yet: the old place. Never create by path once a tagged folder exists anywhere (that is how twins appear).
+      id = await ensurePath(P(root).other(app), { create: own && create });
+      if (id && own) await tagFolder(id, app).catch(e => console.warn('tag folder', e.message));
+    }
+    if (id) { ids[key] = id; verified.add(id); persistIds(); }
+    return id;
+  })().finally(() => tagInflight.delete(flight));
+  tagInflight.set(flight, p);
+  return p;
+}
+const meDir = (root) => appFolder(root, APP);
+/** A folder inside one Calamansi owns (backups/), found by name under its parent's id, so it moves with the parent. */
+async function childDir(parentId, name, create = true) {
+  const key = `${parentId}/${name}`;
+  if (ids[key] && await exists(ids[key])) return ids[key];
+  const found = (await list(parentId, { name, folders: true })).sort((a, b) => (a.createdTime || '').localeCompare(b.createdTime || ''));
+  const id = found[0]?.id || (create ? await mkdir(name, parentId) : null);
+  if (id) { ids[key] = id; verified.add(id); persistIds(); }
+  return id;
+}
+const backupsDir = async (root, create = true) => { const me = await meDir(root); return me ? childDir(me, 'backups', create) : null; };
 
 /** Folder ids Calamansi watches in the changes feed: its own folder, and the folders of the apps it reads (Mandarin, Citrus). */
 export async function watchedFolders(root) {
-  const [hub, me] = await Promise.all([ensurePath(P(root).hub), ensurePath(P(root).me)]);
-  const [mandarin, citrus] = await Promise.all([ensurePath(P(root).other('mandarin'), { create: false }), ensurePath(P(root).other('citrus'), { create: false })]);
-  return { hub, me, mandarin: mandarin || '', citrus: citrus || '' };
+  const me = await meDir(root);
+  const [mandarin, citrus, hub] = await Promise.all([appFolder(root, 'mandarin'), appFolder(root, 'citrus'), ensurePath(P(root).hub, { create: false })]);
+  return { hub: hub || '', me, mandarin: mandarin || '', citrus: citrus || '' };
 }
+/** Forget the cached folder of an app (its tag now points elsewhere): the next read looks it up again. */
+export function forgetApp(app) { delete ids[`tag:${app}`]; persistIds(); }
 
 /** Calamansi's small public file in hub/calamansi: status.json (what Citrus shows). */
-export async function writeOwnFile(root, name, obj, { omit = ['updatedAt'] } = {}) { const dir = await ensurePath(P(root).me); return putJson(dir, name, obj, { omit, healTwins: true }); }
+export async function writeOwnFile(root, name, obj, { omit = ['updatedAt'] } = {}) { const dir = await meDir(root); return putJson(dir, name, obj, { omit, healTwins: true }); }
 
-/** Another app's JSON file, read only: hub/<app>/<name>. null when it is not there. Twins are left alone (not ours to tidy). */
+/** Another app's JSON file, read only, from the folder its tag points to (old path hub/<app> until tagged). null when it is not there. Twins are left alone (not ours to tidy). */
 export async function readOtherFile(root, app, name) {
-  const dir = await ensurePath(P(root).other(app), { create: false }); if (!dir) return null;
+  const dir = await appFolder(root, app, { create: false }); if (!dir) return null;
   const { file } = await findFile(dir, name); if (!file) return null;
   const data = await readJsonFile(file);
   return data && typeof data === 'object' ? { data, modifiedTime: file.modifiedTime, id: file.id } : null;
@@ -397,7 +446,7 @@ export async function readOtherFile(root, app, name) {
 // ── Calamansi's own state: read with its revision, written only if nobody else wrote it since
 let seenState = null;   // {id, rev, modifiedTime} of the state.json we last read or wrote
 export async function loadRemoteState(root) {
-  const dir = await ensurePath(P(root).me);
+  const dir = await meDir(root);
   const { file, twins } = await findFile(dir, 'state.json');
   if (!file) { seenState = null; return null; }
   for (const t of twins) trash(t.id).catch(() => {});
@@ -422,7 +471,7 @@ export async function remoteStateMoved() {
   catch (e) { if (e.status === 404) return true; throw e; }
 }
 export async function saveRemoteState(root, state, { force = false } = {}) {
-  const dir = await ensurePath(P(root).me);
+  const dir = await meDir(root);
   if (!force && await remoteStateMoved()) { const e = new GoogleError('Another device saved first.', { status: 409 }); e.conflict = true; throw e; }
   const rev = `${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 7)}`;
   const r = await putJson(dir, 'state.json', state, { props: { rev }, fileId: seenState?.id || null, always: force });
@@ -433,7 +482,7 @@ export function seenStateRev() { return seenState?.rev || ''; }
 
 // ── daily backups of state.json: hub/calamansi/backups/state-YYYY-MM-DD.json, the newest 14 kept
 export async function backupDaily(root, state, dayKey) {
-  const dir = await ensurePath(P(root).backups);
+  const dir = await backupsDir(root);
   const name = `state-${dayKey}.json`, size = JSON.stringify(state).length;
   // today's copy is taken again when the data has grown a lot since (the first sync of day one was an empty 717 B: beta T5-07)
   const had = +ids[`backup:${name}`] || 0;
@@ -450,12 +499,12 @@ export async function backupDaily(root, state, dayKey) {
 }
 /** A copy kept just before a risky step (migration, restore, replace): hub/calamansi/backups/state-YYYY-MM-DD-before-<what>.json. */
 export async function backupBefore(root, state, what) {
-  const dir = await ensurePath(P(root).backups);
+  const dir = await backupsDir(root);
   const d = new Date(), p2 = (n) => String(n).padStart(2, '0');
   await putJson(dir, `state-${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}-before-${what}-${p2(d.getHours())}${p2(d.getMinutes())}.json`, state);
 }
 export async function listBackups(root) {
-  const dir = await ensurePath(P(root).backups, { create: false }); if (!dir) return [];
+  const dir = await backupsDir(root, false); if (!dir) return [];
   return (await list(dir, { extra: "name contains 'state-'" })).sort((a, b) => b.name.localeCompare(a.name)).map(f => ({ id: f.id, name: f.name, date: f.name.slice(6, 16), size: +f.size || 0 }));
 }
 export async function readBackup(id) { return readJsonFile({ id }); }

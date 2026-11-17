@@ -84,6 +84,7 @@ export function buildStatus(s, now = new Date(), { plan = null } = {}) {
   return {
     app: 'calamansi', title: 'Calamansi', icon: '🍋', color: '#9fd94a', url: base, contract: CONTRACT,
     updatedAt: now.toISOString(),
+    drive: { byTag: true },   // finds its folders by tag (claude/drive-layout.md): Citrus may move them into Citrus/…
     summary: bits.join(' · ').slice(0, 140),
     today: { date: t, done: !late.length && !due.some(x => x.late >= 0) },
     next, asks: asks.slice(0, 4), metrics, pending: pending.slice(0, 10), inbox: inbox.slice(0, 25), actions,

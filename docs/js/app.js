@@ -21,7 +21,7 @@ import * as TU from './today-ui.js';
 import { checkBackup, describeCounts } from './backup-check.js';
 import { h, toast, keyOf, fromKey, addDays, startOfDay, fmtDate, pad2, DAY_NAMES, MONTHS, uid } from './util.js';
 
-export const VERSION = '1.1.0';
+export const VERSION = '1.1.1';
 const CITRUS_URL = 'https://amaerys.github.io/citrus-maxima/';
 const MANDARIN_URL = 'https://mandarin-work.github.io/Mandarin/';
 
@@ -318,6 +318,7 @@ async function refreshAll(manual, { full = false } = {}) {
     if (manual) toast(e.message, 'err');
   } finally { rt.syncing = false; renderSync(); render(); }
 }
+const TAG_WATCH = { calamansi: 'me', mandarin: 'mandarin', citrus: 'citrus' };   // drive-layout.md tag → watch key
 /** Turn a page of Drive changes into the smallest sync that covers them. null = can't tell, do a full pass. */
 function classifyChanges(changes, w) {
   const plan = { state: false, hub: false };
@@ -329,6 +330,8 @@ function classifyChanges(changes, w) {
     if (w.mandarin && par.includes(w.mandarin) && c.name === 'shifts.json') plan.hub = true;
     if (w.citrus && par.includes(w.citrus) && c.name === 'plan.json') plan.hub = true;
     if (par.includes(w.hub) && c.mimeType === 'application/vnd.google-apps.folder' && (c.name === 'mandarin' || c.name === 'citrus') && c.id !== w.mandarin && c.id !== w.citrus) return null;   // a folder Calamansi reads appeared: full pass
+    const tag = c.mimeType === 'application/vnd.google-apps.folder' && !c.trashed && !c.removed ? c.props?.citrusApp : '';
+    if (tag && TAG_WATCH[tag] && c.id !== w[TAG_WATCH[tag]]) { G.forgetApp(tag); return null; }   // a folder Calamansi uses got (re)tagged elsewhere: look again
   }
   return plan;
 }

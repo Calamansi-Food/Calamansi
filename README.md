@@ -10,7 +10,7 @@ The home app of the citrus family, split out of Citrus Maxima on 16/11/2026. Cal
 
 ## How it fits with the other apps
 
-One Google Drive tree for every app (see `HUB.md` in Citrus). Calamansi writes only `My Apps/hub/calamansi/`:
+One Google Drive tree for every app (see `HUB.md` in Citrus). Calamansi finds its folder by tag (`citrusApp = calamansi`; today `My Apps/hub/calamansi/`, later wherever Citrus moves it) and writes only there:
 
 | File | For | What is in it |
 |---|---|---|

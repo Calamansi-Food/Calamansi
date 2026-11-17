@@ -101,6 +101,33 @@ check(Object.values(ea.shopping).some(x => x.name === 'Coffee beans') && Object.
 check(Object.keys(ea.recipes).length === NS - 1 && Object.keys(eb.recipes).length === NS - 1, 'a recipe deleted on the phone stays deleted on both');
 const twins = g.tree().filter(l => /(status|state)\.json/.test(l) && !/backups|citrus|mandarin/.test(l));
 check(twins.length === new Set(twins).size, `no duplicate files (${twins.length})`);
+
+// ---- drive-layout.md: folders found by tag; Citrus moves them and Calamansi follows ----
+const folder = (name, parentParts) => g.find(name, g.path(parentParts, false));
+const own = folder('calamansi', ['My Apps', 'hub']);
+check(own?.appProperties?.citrusApp === 'calamansi', 'Calamansi tagged its own folder (citrusApp = calamansi)');
+check(g.readJsonAt(['My Apps', 'hub', 'calamansi'], 'status.json')?.drive?.byTag === true, 'status.json says drive.byTag');
+check(!folder('mandarin', ['My Apps', 'hub']).appProperties?.citrusApp && !folder('citrus', ['My Apps', 'hub']).appProperties?.citrusApp, "other apps' folders are never tagged by Calamansi");
+// Citrus's organiser: tag Mandarin and Citrus, move all three into Citrus/…, renamed
+const moveTo = (f, parts, name, tag) => { f.parents = [g.path(parts)]; f.name = name; if (tag) f.appProperties = { ...(f.appProperties || {}), citrusApp: tag }; g.touch(f); };
+const mand = folder('mandarin', ['My Apps', 'hub']), cit = folder('citrus', ['My Apps', 'hub']);
+moveTo(own, ['Citrus', 'Life'], 'Home & Kitchen - Calamansi');
+moveTo(mand, ['Citrus', 'Work'], 'Mandarin', 'mandarin');
+moveTo(cit, ['Citrus', '00 Hub'], 'Citrus', 'citrus');
+await A.p.evaluate(() => window.__calamansi.store.update(s => window.__calamansi.K.addShop(s, { name: 'Cardamom' }))); await sleep(300);
+await sync(A.p);
+const moved = ['Citrus', 'Life', 'Home & Kitchen - Calamansi'];
+check(Object.values(g.readJsonAt(moved, 'state.json')?.shopping || {}).some(x => x.name === 'Cardamom'), 'after the move, the phone saves into the moved folder');
+check(g.readJsonAt(moved, 'status.json')?.drive?.byTag === true, 'and status.json is there too');
+check(!g.path(['My Apps', 'hub', 'calamansi'], false), 'no new My Apps/hub/calamansi appeared');
+const C = await device('fresh tablet', { width: 800 });
+await sync(C.p);
+const sc = await state(C.p);
+check(Object.values(sc.shopping || {}).some(x => x.name === 'Cardamom') && Object.keys(sc.recipes || {}).length === NS - 1, 'a fresh device after the move finds the data by tag');
+check(await until(C.p, () => window.__calamansi.R.has()), "and reads Mandarin's shifts from Mandarin's moved folder");
+check(!g.path(['My Apps', 'hub', 'calamansi'], false) && !g.path(['My Apps', 'hub', 'mandarin'], false), 'and recreates nothing at the old paths');
+check(!C.p.errors.length, `no page errors on the fresh device${C.p.errors.slice(0, 2).join(' | ')}`);
+
 check(!A.p.errors.length && !B.p.errors.length, `no page errors${[...A.p.errors, ...B.p.errors].slice(0, 2).join(' | ')}`);
 await browser.close(); server.close();
 if (bad()) { console.log(`${bad()} hub check(s) FAILED`); process.exit(1); }
