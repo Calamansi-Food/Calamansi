@@ -48,7 +48,7 @@ export const state = {
     b2: { id: 'b2', title: 'Rent', icon: '🏠', kind: 'bill', amount: 2500, every: 1, due: d(14), remind: 5, autopay: false, paid: ['2026-10-14'], note: '', at },
     b3: { id: 'b3', title: 'Streaming', icon: '🎬', kind: 'subscription', amount: 30, every: 1, due: '2026-12-05', remind: 2, autopay: true, paid: [], note: '', at },
   },
-  cars: { car1: { id: 'car1', name: 'Test Camry', icon: '🚗', model: 'camry-2016', severe: true, istimara: '2027-03-01', fahas: d(30), insurance: '2026-12-20', serviceMonths: 6, serviceKm: 10000, lastService: '', lastServiceKm: 0, odo: 49200, odoAt: d(10),
+  cars: { car1: { id: 'car1', name: 'Test Camry', icon: '🚗', model: 'camry-2016', severe: true, plate: 'ر س ط 4821', vin: '1M8GDM9AXKP042788', year: 2016, colour: 'ازرق فاتح', seats: 5, istimara: '2027-03-01', fahas: d(30), insurance: '2026-12-20', serviceMonths: 6, serviceKm: 10000, lastService: '', lastServiceKm: 0, odo: 49200, odoAt: d(10),
     odoLog: [{ date: '2026-10-01', km: 47800 }, { date: d(10), km: 49200 }],
     care: { oil: { last: '2026-07-20', lastKm: 41500, count: 3 }, rotate: { last: '2026-07-20', lastKm: 41500 }, airFilter: { last: '2025-12-01', lastKm: 33000 }, battery: { last: '2025-11-01' }, wash: { last: d(10) } },
     fuel: [{ date: d(1), litres: 40, cost: 93.2, km: 47000, full: true }, { date: d(8), litres: 45, cost: 104.85, km: 47600, full: true }],

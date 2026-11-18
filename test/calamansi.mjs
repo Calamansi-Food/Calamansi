@@ -7,6 +7,8 @@ import * as C from '../docs/js/chores.js';
 import * as K from '../docs/js/kitchen.js';
 import * as L from '../docs/js/life.js';
 import * as CC from '../docs/js/carcare.js';
+import * as PO from '../docs/js/policy.js';
+import { POLICY_TEXT } from './policy-sample.mjs';
 import * as HUB from '../docs/js/hub.js';
 import * as MIG from '../docs/js/migrate.js';
 import * as CZ from '../docs/js/custom.js';
@@ -201,5 +203,35 @@ const cb = checkBackup({ ...S0, friends: { x: {} }, recipes: { ...S0.recipes, ba
 check(cb.ok && !cb.state.friends && !cb.state.recipes.bad && cb.dropped.length === 2 && cb.summary.counts.recipes === K.STARTERS.length, 'a backup is cleaned before it is restored');
 const cz = CZ.custom({ settings: { custom: { kitchen: { machines: ['airfryer', 'laser'], days: 99 }, diet: { kcal: -5 }, tabs: { hidden: ['today', 'shop'] } } } });
 check(cz.kitchen.machines.join() === 'airfryer' && cz.kitchen.days === 7 && cz.diet.kcal === 0 && cz.tabs.hidden.join() === 'shop', 'settings are cleaned (unknown machines, odd numbers, Today always shown)');
+
+// ── insurance policy, VIN, identity, driver (made-up policy in test/policy-sample.mjs)
+console.log('\ninsurance, VIN, driver');
+const pp = PO.parsePolicy(POLICY_TEXT);
+check(pp.company === 'Al Rajhi Takaful' && pp.policy === 'P0999-MTI-TEST-00000001/R1' && pp.kind === 'third', `policy: insurer, number, third party (${pp.company} / ${pp.kind})`);
+check(pp.start === '2026-03-01' && pp.end === '2027-02-28', `policy period from US-style dates, issue date ignored (${pp.start} → ${pp.end})`);
+check(pp.premium === 1234.5 && pp.deductible === 0 && pp.phone === '800 000 0000' && /10 million/.test(pp.limit) && pp.repair === 'Outside Agency - Tier 1', 'premium, deductible, helpline, limit, repairs');
+check(pp.perks.some(p => /150 km/.test(p)) && pp.perks.some(p => /Battery/.test(p)) && pp.perks.some(p => /Loyalty/.test(p)) && pp.perks.some(p => /Taxi/.test(p)), `roadside extras (${pp.perks.length})`);
+check(pp.vin === '1M8GDM9AXKP042788' && pp.plate === 'د ح ب 1234' && pp.make === 'Toyota' && pp.modelName === 'Camry' && pp.year === 2016, `the car on it (${pp.plate}, ${pp.year})`);
+check(!JSON.stringify(pp).includes('TEST PERSON') && !JSON.stringify(pp).includes('1000000001') && !JSON.stringify(pp).includes('1990'), 'nothing about the person is kept');
+check(!PO.parsePolicy('غير شامل ضريبة القيمة المضافة').kind && PO.parsePolicy('Comprehensive motor policy').kind === 'comp', '"VAT not included" is not "comprehensive"');
+check(PO.periodIn('from 17/04/2026 to 16/04/2027').end === '2027-04-16' && PO.periodIn('nothing here') === null, 'periods in dd/mm too');
+const vi = PO.vinInfo('1M8GDM9AXKP042788', 2026);
+check(vi.ok && vi.check && vi.year === 2019 && !PO.vinInfo('1M8GDM9AXKP04278').ok && !PO.vinInfo('IM8GDM9AXKP042788').ok && PO.vinInfo('1M8GDM9A1KP042788').check === false, 'VIN: check digit, model year, bad ones refused');
+let sp = { cars: {} };
+sp = L.saveCar(sp, L.fromPolicy({ ...CC.fromModel('camry-2016'), name: 'Camry' }, pp));
+const pc = Object.values(sp.cars)[0];
+check(pc.insurance === '2027-02-28' && pc.ins.company === 'Al Rajhi Takaful' && pc.ins.kind === 'third' && pc.vin === '1M8GDM9AXKP042788' && pc.year === 2016 && pc.ins.perks.length >= 4, 'a car made from the policy keeps the cover, dates, VIN and year');
+sp = L.saveCar(sp, { ...pc, vin: 'not a vin', seats: 500, ins: { kind: 'magic', premium: -4 } });
+const pc2 = Object.values(sp.cars)[0];
+check(pc2.vin === '' && pc2.seats === 60 && pc2.ins.kind === '' && pc2.ins.premium === 0, 'odd identity and policy values are cleaned');
+check(L.cleanIns({}) === null && L.cleanIns(null) === null, 'an empty policy is no policy');
+let sd = L.setDriver({ settings: {} }, { licence: '2026-12-20', issued: '2016-09-04', blood: 'Z+', type: 'Private' });
+check(L.driverOf(sd).licence === '2026-12-20' && L.driverOf(sd).blood === '' && L.heldFor('2016-09-04', NOW).years === 10, 'driver: licence kept, odd blood type refused, years driving');
+const da = L.carAlerts(sd, NOW).find(a => a.driver);
+check(da && da.days === 34 && /Driving licence expires in 34 days/.test(L.alertText(da)), `a licence two months from expiry warns (${da && L.alertText(da)})`);
+const dst = HUB.buildStatus({ ...state, settings: { ...state.settings, driver: { licence: '2026-12-20' } } }, NOW);
+check(dst.inbox.some(x => /driving licence/i.test(x.title)), 'and reaches the Citrus inbox');
+const sm = mergeStates(L.setDriver({ settings: {}, stamps: {} }, { licence: '2030-01-01' }), { settings: { driver: { licence: '2029-01-01' } }, stamps: { 'set:driver': 1 }, updatedAt: 1 });
+check(sm.settings.driver?.licence, 'the driver merges as a setting');
 
 if (bad()) { console.log(`${bad()} check(s) FAILED`); process.exit(1); }

@@ -1,0 +1,28 @@
+// A made-up motor policy, laid out the way pdf.js reads a bilingual Saudi policy (Arabic words in reverse order).
+// No real person, car or policy. Used by test/calamansi.mjs and test/smoke.mjs (as text and as a PDF).
+export const POLICY_TEXT = [
+  'الغير ضد تأمين المختار المنتج .',
+  'Date 02/03/2026 02/03/2026 التاريخ',
+  'Thank you for choosing Al Rajhi Takaful. Please find enclosed',
+  'Policy Number (P0999-MTI-TEST-00000001/R1), which has been',
+  'Name of the Insured TEST PERSON ONE',
+  'له المؤمن اسم',
+  'Date Of Birth 01/01/1990',
+  'National ID / Iqama ID 1000000001',
+  'plate number 1234 ب ح د االلوحة رقم',
+  'Make name TOYOTA المركبة نوع',
+  'Model name CAMRY المركبة موديل',
+  'Chassis Number 1M8GDM9AXKP042788 الهيكل رقم',
+  '3/1/2026 12:00 am', 'Start Date التأمين بداية تاريخ',
+  '2/28/2027 11:59 pm', 'Expiry Date التأمين انتهاء تاريخ',
+  'product الغير ضد تأمين المنتج',
+  'Outside Agency - Tier 1 الصلح نوع',
+  'Deductible - VAT is not included 0.00 المضافة القيمة ضريبة شامل غير - التحمل',
+  'toll free helpline on 800 000 0000.',
+  'الغير ضد التأمين سعودي ر مليين 10 إلى تصل الغير تجاه المسؤولية تغطية .',
+  '150 حتى السحب أنواع جميع / السحب أو الحتياطي الطار مع الطار تغيير / التكلفة',
+  'تشغيل البطارية / تزويد الوقود – المشترك يدفع تاكسي حتى 100',
+  'الولء خصم مطالبات وجود عدم خصم',
+  '1,234.50 المضافة القيمة ضريبة + ( الوثيقة رسوم بعد ) القساط صافي = القساط إجمالي',
+  '2016 Sedan CAMRY TOYOTA',
+].join('\n');

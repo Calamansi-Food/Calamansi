@@ -1,6 +1,6 @@
 // Your choices for how Calamansi looks and behaves — synced with your state (settings.custom), unlike the per-device interface.
 // Pure: defaults, sanitising and small getters. Settings › Customise edits it.
-export const TABS = [['today', 'Today'], ['home', 'Home'], ['kitchen', 'Kitchen'], ['shop', 'Shop'], ['life', 'Life']];
+export const TABS = [['today', 'Today'], ['home', 'Home'], ['kitchen', 'Kitchen'], ['shop', 'Shop'], ['car', 'Car'], ['life', 'Life']];
 export const SECTIONS = [['day', 'Your day'], ['meals', 'Meals today'], ['chores', 'Chores'], ['fridge', 'Use it up'], ['shop', 'Shopping'], ['life', 'Bills and the car'], ['actions', 'Quick actions']];
 export const ACCENTS = [['calamansi', 'Calamansi', '#9fd94a'], ['leaf', 'Leaf', '#4cc27a'], ['pulp', 'Pulp', '#f6b93b'], ['mint', 'Mint', '#4fd6b0'], ['clementine', 'Clementine', '#ff6a3d'], ['sky', 'Sky', '#4fb4ff']];
 export const MACHINE_IDS = ['airfryer', 'oven', 'microwave', 'stove'];

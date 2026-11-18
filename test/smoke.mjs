@@ -2,10 +2,11 @@
 // no stray "undefined" / "NaN" / "null" on screen and no sideways scroll. Run: node test/smoke.mjs
 import { chromium, serve, page, sleep, checker } from './helpers.mjs';
 import { shifts, state } from './fixture.mjs';
+import { POLICY_TEXT } from './policy-sample.mjs';
 import fs from 'node:fs'; import path from 'node:path';
 const shots = path.resolve(path.dirname(new URL(import.meta.url).pathname), 'shots/smoke'); fs.rmSync(shots, { recursive: true, force: true }); fs.mkdirSync(shots, { recursive: true });
 const { server, url } = await serve(), browser = await chromium.launch(), { check, bad } = checker();
-const TABS = ['today', 'home', 'kitchen', 'shop', 'life', 'more'];
+const TABS = ['today', 'home', 'kitchen', 'shop', 'car', 'life', 'more'];
 const clean = async (p, sel, what) => {
   const txt = await p.locator(sel).innerText();
   check(txt.length > 30, `${what} renders (${txt.length} chars)`);
@@ -57,19 +58,66 @@ for (const [w, hgt, time, ui] of [[390, 844, '2026-11-16T09:30:00+03:00', 'clean
   await tab('shop', 'Fridge'); await clean(p, '#view-shop', 'Shop › Fridge'); await p.screenshot({ path: `${shots}/${w}-fridge.png`, fullPage: true });
   await sheetCheck(() => p.click('#view-shop .sp-main >> nth=0'), 'food sheet');
   // Life
-  await tab('life', 'Bills'); await sheetCheck(() => p.click('#view-life .lf-bill .ch-main >> nth=0'), 'bill sheet');
-  await tab('life', 'Car'); await clean(p, '#view-life', 'Life › Car'); await p.screenshot({ path: `${shots}/${w}-car.png`, fullPage: true });
-  await sheetCheck(() => p.click('#view-life .lf-carhero button[aria-label^="Edit"]'), 'car sheet');
-  const it = await sheetCheck(() => p.click('#view-life .lf-item >> nth=0'), 'care item sheet'); check(/Toyota|Saudi|Forums/.test(it), 'a care item shows what the sources say');
-  await sheetCheck(() => p.click('#view-life button:has-text("Log a service")'), 'service visit');
-  await sheetCheck(() => p.click('#view-life .lf-acts button:has-text("Fuel")'), 'fuel sheet');
-  const lifeTxt = await p.locator('#view-life').innerText(); check(/What Camry owners run into/i.test(lifeTxt) && /L \/ 100 km/i.test(lifeTxt), 'known issues and the fuel card show');
-  await tab('life', 'Anatomy'); await clean(p, '#view-life', 'Life › Anatomy'); await p.screenshot({ path: `${shots}/${w}-anatomy.png`, fullPage: true });
-  const part = await sheetCheck(() => p.click('#view-life .an-hot >> nth=3'), 'anatomy part'); check(/What it does/i.test(part) && /How to check/i.test(part), 'a part explains itself');
-  await p.click('#view-life .an-hero button:has-text("Find it")'); await sleep(200);
-  const want = (await p.locator('#view-life .an-hero').innerText()).match(/Find: (.+)/)?.[1]?.trim();
-  if (want) { await p.click(`#view-life .an-hot[aria-label="${want.replace(/"/g, '\\"')}"]`).catch(() => {}); await sleep(300); check(/1\/6/.test(await p.locator('#view-life .an-score').innerText()), 'Find it scores a right answer'); }
-  await tab('life', 'Anatomy'); await p.click('#view-life .seg button:has-text("The whole car")').catch(() => {}); await sleep(200); await clean(p, '#view-life', 'Anatomy › whole car');
+  await tab('life'); await sheetCheck(() => p.click('#view-life .lf-bill .ch-main >> nth=0'), 'bill sheet');
+  await tab('car'); await clean(p, '#view-car', 'Car'); await p.screenshot({ path: `${shots}/${w}-car.png`, fullPage: true });
+  await sheetCheck(() => p.click('#view-car .lf-carhero button[aria-label^="Edit"]'), 'car sheet');
+  const it = await sheetCheck(() => p.click('#view-car .lf-item >> nth=0'), 'care item sheet'); check(/Toyota|Saudi|Forums/.test(it), 'a care item shows what the sources say');
+  await sheetCheck(() => p.click('#view-car button:has-text("Log a service") >> nth=0'), 'service visit');
+  await sheetCheck(() => p.click('#view-car .lf-acts button:has-text("Fuel")'), 'fuel sheet');
+  check(await p.locator('#view-car .ksa-plate').count() === 1 && await p.locator('#view-car .lf-ring b').count() === 1, 'the hero shows the plate and the health ring');
+  const acc = await sheetCheck(() => p.click('#view-car .lf-acts button:has-text("Accident")'), 'accident sheet'); check(/Najm/.test(acc) && /199033/.test(acc) && /1M8GDM9AXKP042788/.test(acc), 'the accident card has Najm, the steps and the VIN');
+  // Service: by system, with the Arabic workshop names; a planned service and the workshop list; a road trip
+  await tab('car', 'Service'); const svc = await clean(p, '#view-car', 'Car › Service'); await p.screenshot({ path: `${shots}/${w}-car-service.png`, fullPage: true });
+  check(/Suspension/i.test(svc) && /المساعدات/.test(svc) && /المقصات وجلود المقصات/.test(svc) && /البواجي/.test(svc), 'parts are grouped and named in Arabic too');
+  await p.click('#view-car button:has-text("Plan a service")'); await sleep(300);
+  await p.click('.sheet button:has-text("Everything due")'); await sleep(150); await p.click('.sheet .chip:has-text("Shock absorbers")'); await sleep(150);
+  await p.fill('.sheet input[type=date]', '2026-12-05'); await p.click('.sheet button:has-text("Save the plan")'); await sleep(400);
+  await tab('car', 'Overview'); const ov = await p.locator('#view-car .cr-plan').innerText().catch(() => '');
+  check(/Planned service/i.test(ov) && /Shock absorbers/.test(ov) && /المساعدات/.test(ov), 'the planned service shows on the overview, English + Arabic');
+  const ws = await sheetCheck(() => p.click('#view-car .cr-plan button:has-text("Show the workshop")'), 'workshop list'); check(/المساعدات/.test(ws) && /KYB/.test(ws) && /1M8GDM9AXKP042788/.test(ws), 'the workshop list has Arabic, the part to ask for and the VIN');
+  await tab('car', 'Road trip'); await p.fill('#view-car input[placeholder^="e.g. East"]', 'Test loop'); await p.fill('#view-car input[placeholder="total km"]', '3300'); await p.fill('#view-car .cr-trip input[type=date]', '2026-12-15'); await p.click('#view-car .cr-trip button:has-text("Save")'); await sleep(400);
+  const trip = await clean(p, '#view-car', 'Car › Road trip'); await p.screenshot({ path: `${shots}/${w}-car-trip.png`, fullPage: true });
+  check(/3,300/.test(trip) && /litres/i.test(trip) && /Before you leave/i.test(trip), 'the trip shows fuel and the checklist');
+  await p.click('#view-car .cr-check >> nth=0'); await sleep(300); check(/1\/12/.test(await p.locator('#view-car .cr-checks').innerText()), 'a check ticks and stays');
+  // insurance from a (made-up) policy PDF, read in the browser with pdf.js
+  await tab('car', 'Papers'); await clean(p, '#view-car', 'Car › Papers');
+  await p.click('#view-car .lf-ins button:has-text("Add policy")'); await sleep(300);
+  await p.setInputFiles('.sheet input[type=file]', path.resolve(path.dirname(new URL(import.meta.url).pathname), 'policy-sample.pdf'));
+  const okPdf = await p.waitForSelector('.sheet .lf-found.ok', { timeout: 15000 }).then(() => true).catch(() => false);
+  check(okPdf, `the policy PDF is read (${(await p.locator('.sheet .lf-found').innerText().catch(() => '')).slice(0, 80)})`);
+  await p.screenshot({ path: `${shots}/${w}-policy-read.png` });
+  await p.click('.sheet button:has-text("Save")'); await sleep(400);
+  const ins = await p.locator('#view-car .lf-ins').innerText();
+  check(/Tawuniya/i.test(ins) && /third party only/i.test(ins) && /980/.test(ins) && /Towing up to 100 km/i.test(ins), 'the insurance card shows insurer, cover, price and extras');
+  // the same from pasted text (bilingual, Arabic words reversed as pdf.js gives them)
+  await p.click('#view-car .lf-ins button:has-text("Edit")'); await sleep(300);
+  await p.fill('.sheet textarea', POLICY_TEXT); await sleep(200);
+  check(/Found: insurer/.test(await p.locator('.sheet .lf-found').innerText()), 'pasted policy text is read');
+  await p.click('.sheet button:has-text("Save")'); await sleep(400);
+  check(/Al Rajhi Takaful/i.test(await p.locator('#view-car .lf-ins').innerText()), 'and replaces the details');
+  // the driver
+  await p.click('#view-car .lf-driver button'); await sleep(300);
+  await p.fill('.sheet input[type=date] >> nth=0', '2030-04-06'); await p.fill('.sheet input[type=date] >> nth=1', '2016-09-04'); await p.click('.sheet button:has-text("Save")'); await sleep(400);
+  check(/until 06\/04\/2030/.test(await p.locator('#view-car .lf-driver').innerText()) && /years driving/i.test(await p.locator('#view-car .lf-driver').innerText()), 'the licence and years driving show');
+  await clean(p, '#view-car', 'Car › Papers with policy'); await p.screenshot({ path: `${shots}/${w}-car-papers.png`, fullPage: true });
+  await tab('car', 'Overview'); const lifeTxt = await p.locator('#view-car').innerText(); check(/What Camry owners run into/i.test(lifeTxt) && /L \/ 100 km/i.test(lifeTxt), 'known issues and the fuel card show');
+  await tab('car', 'Anatomy'); await clean(p, '#view-car', 'Car › Anatomy'); await p.screenshot({ path: `${shots}/${w}-anatomy.png`, fullPage: true });
+  const part = await sheetCheck(() => p.click('#view-car .an-hot >> nth=3'), 'anatomy part'); check(/What it does/i.test(part) && /How to check/i.test(part), 'a part explains itself');
+  await p.click('#view-car .an-hero button:has-text("Find it")'); await sleep(200);
+  const want = (await p.locator('#view-car .an-hero').innerText()).match(/Find: (.+)/)?.[1]?.trim();
+  if (want) { await p.click(`#view-car .an-hot[aria-label="${want.replace(/"/g, '\\"')}"]`).catch(() => {}); await sleep(300); check(/1\/6/.test(await p.locator('#view-car .an-score').innerText()), 'Find it scores a right answer'); }
+  await tab('car', 'Anatomy'); await p.click('#view-car .an-hero .seg button:has-text("The whole car")').catch(() => {}); await sleep(200); await clean(p, '#view-car', 'Anatomy › whole car');
+  if (w === 1500) {   // a setup link (#setup=…) proposes the car + papers + licence; nothing is saved until "Update"
+    const payload = { car: { name: 'Test Camry', model: 'camry-2016', vin: '1M8GDM9AXKP042788', istimara: '2028-01-02', fahas: '2027-02-03', colour: 'ازرق فاتح' }, driver: { licence: '2031-01-01' } };
+    const b64 = Buffer.from(JSON.stringify(payload)).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    await p.goto(`${url}?do=car#setup=${b64}`); await sleep(900);
+    const su = await p.locator('.sheet').innerText().catch(() => '');
+    check(/Update Test Camry/.test(su) && /Istimara until 02\/01\/2028/.test(su), 'a setup link proposes the update');
+    check(!/setup=/.test(await p.evaluate(() => location.href)), 'and is wiped from the address bar');
+    await p.click('.sheet button:has-text("Update")'); await sleep(900);
+    await p.click('#view-car .cr-seg button:has-text("Papers")'); await sleep(200); const after = await p.locator('#view-car').innerText();
+    check(/02\/01\/2028/.test(after) && /until 01\/01\/2031/.test(after) && await p.evaluate(() => Object.keys(window.__calamansi.store.get().cars).length) === 1, 'the car is updated, not doubled');
+  }
   // Home
   await tab('home'); await sheetCheck(() => p.click('#view-home button:has-text("Find a time") >> nth=0'), 'chore planner'); await sheetCheck(() => p.click('#view-home .chore button[aria-label^="Edit"] >> nth=0'), 'chore editor');
   await sheetCheck(() => p.click('#btnSearch'), 'search').catch(() => {});

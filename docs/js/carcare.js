@@ -18,25 +18,58 @@ const txt = (v, n = 80) => String(v ?? '').trim().slice(0, n);
  * what = what is done, why = one line of reason, shown on the item.
  */
 export const ITEMS = {
-  oil: { label: 'Oil + oil filter', icon: '🛢️', km: 8000, months: 6, nKm: 16000, nMonths: 12, what: 'Drain, new filter, fresh oil.', why: 'Heat and dust age oil faster; the engine’s main wear item.' },
-  rotate: { label: 'Tyre rotation', icon: '🔄', km: 8000, months: 6, nKm: 8000, nMonths: 6, what: 'Swap front and rear tyres; check tread and brakes while the wheels are off.', why: 'Even wear makes a set last much longer.' },
-  brakes: { label: 'Brake pads check', icon: '🛑', km: 8000, months: 6, nKm: 16000, nMonths: 12, what: 'Look at pad thickness and discs.', why: 'City driving wears the fronts first.' },
-  airFilter: { label: 'Engine air filter', icon: '🌬️', km: 24000, months: 24, nKm: 48000, nMonths: 36, what: 'Replace (inspect at every oil change in dusty months).', why: 'Dust clogs it; a blocked filter costs power and fuel.' },
-  cabinFilter: { label: 'Cabin (AC) filter', icon: '❄️', km: 16000, months: 12, nKm: 16000, nMonths: 12, what: 'Replace the filter behind the glovebox.', why: 'Keeps dust out of the cabin and the AC blowing strong.' },
-  brakeFluid: { label: 'Brake fluid', icon: '💧', km: 0, months: 24, nKm: 0, nMonths: 36, what: 'Flush and refill.', why: 'Brake fluid takes up water over time and boils sooner when hot.' },
-  coolant: { label: 'Coolant', icon: '🌡️', km: 160000, months: 120, nKm: 160000, nMonths: 120, then: { km: 80000, months: 60 }, what: 'Drain and refill with Toyota Super Long Life Coolant (pink).', why: 'First change at 10 years / 160,000 km, then every 5 years / 80,000 km.' },
-  atf: { label: 'Transmission fluid (ATF WS)', icon: '⚙️', km: 48000, months: 48, nKm: 96000, nMonths: 72, what: 'Drain and fill with Toyota ATF WS — never a pressure “flush”.', why: 'Toyota calls it lifetime fluid; owners and Toyota techs drain-and-fill anyway, and the 6-speed’s torque-converter shudder often eases with fresh fluid.' },
-  plugs: { label: 'Spark plugs (iridium)', icon: '⚡', km: 190000, months: 0, nKm: 190000, nMonths: 0, what: 'Replace all four.', why: 'Long-life iridium plugs; a misfire or rough idle means sooner.' },
-  battery: { label: 'Battery test', icon: '🔋', km: 0, months: 6, nKm: 0, nMonths: 12, what: 'Free load test at most battery shops; clean the terminals.', why: 'Saudi heat often ends a battery in 2–3 years, usually without warning.' },
-  batteryNew: { label: 'New battery', icon: '🪫', km: 0, months: 36, nKm: 0, nMonths: 48, what: 'Replace before it strands you; the date code is on the case.', why: 'Saudi service sources put hot-climate battery life at 2–3 years.' },
-  belt: { label: 'Drive belt check', icon: '➰', km: 96000, months: 72, nKm: 96000, nMonths: 72, what: 'Look for cracks and glazing; listen for squeal on cold starts.', why: 'One belt runs the alternator, AC and water pump.' },
-  ac: { label: 'AC check before summer', icon: '🧊', km: 0, months: 12, nKm: 0, nMonths: 12, what: 'Gas pressure, compressor, condenser clean — best in March or April.', why: 'Fixing it before the heat beats a 45 °C wait at the workshop.' },
-  wipers: { label: 'Wiper blades', icon: '🌧️', km: 0, months: 12, nKm: 0, nMonths: 12, what: 'Replace both blades.', why: 'Sun cracks the rubber; you find out on the first rain.' },
-  tyrePressure: { label: 'Tyre pressure', icon: '🎯', days: 30, what: 'Check cold, to the pressure on the driver’s door sticker; spare too.', why: 'Heat and low pressure together cause blow-outs.' },
-  wash: { label: 'Wash', icon: '🫧', days: 14, what: 'Wash, and wipe the windscreen and lights.', why: 'Dust and sun dull the paint and the headlights.' },
-  tyres: { label: 'New tyres (by age)', icon: '🛞', km: 0, months: 60, nKm: 0, nMonths: 72, what: 'Replace the set; check the 4-digit date on the sidewall (week + year).', why: 'Rubber ages in the heat even with tread left.' },
+  oil: { ar: 'زيت المكينة وفلتر الزيت', label: 'Oil + oil filter', icon: '🛢️', km: 8000, months: 6, nKm: 16000, nMonths: 12, what: 'Drain, new filter, fresh oil.', why: 'Heat and dust age oil faster; the engine’s main wear item.' },
+  rotate: { ar: 'تدوير الكفرات', label: 'Tyre rotation', icon: '🔄', km: 8000, months: 6, nKm: 8000, nMonths: 6, what: 'Swap front and rear tyres; check tread and brakes while the wheels are off.', why: 'Even wear makes a set last much longer.' },
+  brakes: { ar: 'الفحمات (تيل الفرامل)', label: 'Brake pads', icon: '🛑', km: 8000, months: 6, nKm: 16000, nMonths: 12, what: 'Check pad thickness at every oil change; replace when about 3 mm is left (front pads go first).', why: 'City driving and long downhill runs wear the fronts first; squealing is the wear indicator.' },
+  airFilter: { ar: 'فلتر الهواء', label: 'Engine air filter', icon: '🌬️', km: 24000, months: 24, nKm: 48000, nMonths: 36, what: 'Replace (inspect at every oil change in dusty months).', why: 'Dust clogs it; a blocked filter costs power and fuel.' },
+  cabinFilter: { ar: 'فلتر المكيف', label: 'Cabin (AC) filter', icon: '❄️', km: 16000, months: 12, nKm: 16000, nMonths: 12, what: 'Replace the filter behind the glovebox.', why: 'Keeps dust out of the cabin and the AC blowing strong.' },
+  brakeFluid: { ar: 'زيت الفرامل', label: 'Brake fluid', icon: '💧', km: 0, months: 24, nKm: 0, nMonths: 36, what: 'Flush and refill.', why: 'Brake fluid takes up water over time and boils sooner when hot.' },
+  coolant: { ar: 'موية الرديتر', label: 'Coolant', icon: '🌡️', km: 160000, months: 120, nKm: 160000, nMonths: 120, then: { km: 80000, months: 60 }, what: 'Drain and refill with Toyota Super Long Life Coolant (pink).', why: 'First change at 10 years / 160,000 km, then every 5 years / 80,000 km.' },
+  atf: { ar: 'زيت القير', label: 'Transmission fluid (ATF WS)', icon: '⚙️', km: 48000, months: 48, nKm: 96000, nMonths: 72, what: 'Drain and fill with Toyota ATF WS — never a pressure “flush”.', why: 'Toyota calls it lifetime fluid; owners and Toyota techs drain-and-fill anyway, and the 6-speed’s torque-converter shudder often eases with fresh fluid.' },
+  plugs: { ar: 'البواجي', label: 'Spark plugs (iridium)', icon: '⚡', km: 190000, months: 0, nKm: 190000, nMonths: 0, what: 'Replace all four.', why: 'Long-life iridium plugs; a misfire or rough idle means sooner.' },
+  battery: { ar: 'فحص البطارية', label: 'Battery test', icon: '🔋', km: 0, months: 6, nKm: 0, nMonths: 12, what: 'Free load test at most battery shops; clean the terminals.', why: 'Saudi heat often ends a battery in 2–3 years, usually without warning.' },
+  batteryNew: { ar: 'بطارية جديدة', label: 'New battery', icon: '🪫', km: 0, months: 36, nKm: 0, nMonths: 48, what: 'Replace before it strands you; the date code is on the case.', why: 'Saudi service sources put hot-climate battery life at 2–3 years.' },
+  belt: { ar: 'السيور الخارجية', label: 'Drive belt', icon: '➰', km: 96000, months: 72, nKm: 96000, nMonths: 72, what: 'Look for cracks and glazing; listen for squeal on cold starts.', why: 'One belt runs the alternator, AC and water pump.' },
+  ac: { ar: 'فحص المكيف وتعبئة الفريون', label: 'AC check before summer', icon: '🧊', km: 0, months: 12, nKm: 0, nMonths: 12, what: 'Gas pressure, compressor, condenser clean — best in March or April.', why: 'Fixing it before the heat beats a 45 °C wait at the workshop.' },
+  wipers: { ar: 'المساحات', label: 'Wiper blades', icon: '🌧️', km: 0, months: 12, nKm: 0, nMonths: 12, what: 'Replace both blades.', why: 'Sun cracks the rubber; you find out on the first rain.' },
+  rotors: { ar: 'الهوبات (الديسكات)', label: 'Brake discs (rotors)', icon: '💿', km: 60000, months: 48, nKm: 80000, nMonths: 60, what: 'Replace (or skim if thick enough) — usually every second set of pads, and always if they shake under braking.', why: 'Worn or warped discs shake the steering under braking and wear new pads fast.' },
+  shocks: { ar: 'المساعدات', label: 'Shock absorbers', icon: '🦘', km: 80000, months: 72, nKm: 100000, nMonths: 96, what: 'Replace in pairs (both fronts or both rears), with new top mounts and dust boots; then a wheel alignment.', why: 'Tired shocks lengthen braking, float at highway speed and cup the tyres — worst on long trips.' },
+  arms: { ar: 'المقصات وجلود المقصات', label: 'Control arms + bushings', icon: '🦾', km: 100000, months: 84, nKm: 120000, nMonths: 96, what: 'Lower control arms with their rubber bushings and ball joints; replace if the rubber is cracked or it clunks over bumps. Wheel alignment after.', why: 'Heat cracks the rubber; worn bushings cause clunks, pulling and uneven tyre wear.' },
+  alignment: { ar: 'وزن الأذرعة (ميزان الأذرعة)', label: 'Wheel alignment', icon: '📐', km: 20000, months: 12, nKm: 20000, nMonths: 12, what: 'Set toe and camber. Always after new tyres, shocks, arms or a hard pothole.', why: 'A car that pulls or a crooked steering wheel eats new tyres in months.' },
+  balancing: { ar: 'ترصيص الكفرات', label: 'Wheel balancing', icon: '⚖️', km: 10000, months: 12, nKm: 10000, nMonths: 12, what: 'Balance all four (with the rotation is easiest).', why: 'Vibration through the wheel at 100–120 km/h is usually balance.' },
+  cvBoots: { ar: 'جلود العكوس', label: 'CV joint boots (check)', icon: '🧤', km: 40000, months: 24, nKm: 40000, nMonths: 24, what: 'Look for torn rubber and grease thrown around the inside of the wheel.', why: 'A torn boot lets sand in and the joint clicks on full turns — cheap boot, expensive axle.' },
+  mounts: { ar: 'كراسي المكينة', label: 'Engine mounts (check)', icon: '🧱', km: 100000, months: 96, nKm: 120000, nMonths: 120, what: 'Check for cracked rubber and a thump when shifting into drive or reverse.', why: 'Heat hardens the rubber; worn mounts shake the cabin at idle with the AC on.' },
+  bearings: { ar: 'رمان بلي العجلات', label: 'Wheel bearings (check)', icon: '🛞', km: 100000, months: 84, nKm: 120000, nMonths: 96, what: 'Listen for a hum that changes with speed and on bends; check for play with the wheel off the ground.', why: 'A failing bearing grows louder over weeks; better found before a long highway trip.' },
+  waterPump: { ar: 'طرمبة الماء وليات الرديتر', label: 'Water pump + radiator hoses (check)', icon: '🚿', km: 80000, months: 48, nKm: 100000, nMonths: 60, what: 'Look for pink crust at the pump, soft or swollen hoses, and keep the coolant level between the lines.', why: 'Overheating in the desert ends trips; this pump is a known seep point on the 2.5 L.' },
+  tyrePressure: { ar: 'ضغط هواء الكفرات', label: 'Tyre pressure', icon: '🎯', days: 30, what: 'Check cold, to the pressure on the driver’s door sticker; spare too.', why: 'Heat and low pressure together cause blow-outs.' },
+  wash: { ar: 'غسيل السيارة', label: 'Wash', icon: '🫧', days: 14, what: 'Wash, and wipe the windscreen and lights.', why: 'Dust and sun dull the paint and the headlights.' },
+  tyres: { ar: 'الكفرات', label: 'New tyres (by age)', icon: '🛞', km: 0, months: 60, nKm: 0, nMonths: 72, what: 'Replace the set; check the 4-digit date on the sidewall (week + year).', why: 'Rubber ages in the heat even with tread left.' },
 };
-export const ITEM_ORDER = ['oil', 'rotate', 'brakes', 'tyrePressure', 'wash', 'airFilter', 'cabinFilter', 'battery', 'batteryNew', 'ac', 'wipers', 'brakeFluid', 'atf', 'coolant', 'belt', 'plugs', 'tyres'];
+/** The car by system, for the Service list. */
+export const GROUPS = [
+  ['Engine', '🔧', ['oil', 'airFilter', 'plugs', 'belt', 'coolant', 'waterPump', 'mounts']],
+  ['Brakes', '🛑', ['brakes', 'rotors', 'brakeFluid']],
+  ['Wheels & tyres', '🛞', ['tyres', 'tyrePressure', 'rotate', 'balancing', 'alignment', 'bearings']],
+  ['Suspension', '🦘', ['shocks', 'arms', 'cvBoots']],
+  ['Gearbox', '⚙️', ['atf']],
+  ['Battery, AC & cabin', '🔋', ['battery', 'batteryNew', 'ac', 'cabinFilter', 'wipers']],
+  ['Looks', '🫧', ['wash']],
+];
+/** What to ask the parts shop for: common good-quality aftermarket makes (often the same factories that supply Toyota). Match by VIN. */
+export const PARTS = {
+  oil: '0W-20 full synthetic, about 4.4 L, + a Toyota or Denso oil filter. At this mileage 5W-30 is a common choice if it burns oil.',
+  airFilter: 'Denso, Sakura or Toyota.', cabinFilter: 'Denso (charcoal type keeps dust smell out) or Toyota.',
+  brakes: 'Advics (Toyota’s own supplier) or Akebono ceramic pads — front set, rear if under 3 mm.', rotors: 'Advics, Brembo or Toyota — replace in pairs with the pads.',
+  brakeFluid: 'DOT 3 (Toyota brake fluid), about 1 L for a flush.', atf: 'Toyota ATF WS only — about 3.5–4 L per drain-and-fill.',
+  coolant: 'Toyota Super Long Life Coolant (pink, pre-mixed) — genuine is cheap; don’t mix with green.', plugs: 'Denso or NGK iridium (4) — the shop matches the part number to the VIN.',
+  belt: 'Bando, Gates or Mitsuboshi; replace the tensioner too if it rattles.', waterPump: 'Aisin (makes Toyota’s pump) — with a new gasket and coolant.',
+  shocks: 'KYB (Excel-G) or Monroe, with new top mounts and dust boots; front pair at least.', arms: '555 or CTR lower control arms (come with bushings and ball joint), in pairs.',
+  cvBoots: 'A boot kit (with grease and clamps) — or a whole axle if it already clicks.', mounts: 'Toyota or a known make (e.g. Marmon); the right-side mount wears first.',
+  bearings: 'Koyo or NSK hub bearings.', battery: 'Load test free at battery shops.', batteryNew: 'Size per the old battery (Group 24F/35 class); AC Delco, Varta or a local brand with warranty.',
+  ac: 'Gas top-up only if there is no leak; ask for a leak test.', wipers: 'Bosch or Denso, 26" + 18".', tyres: '215/60R16 is the stock size for this Camry.',
+  alignment: 'Ask for the before/after printout.', balancing: '—', rotate: '—', tyrePressure: 'Pressure on the driver’s door sticker.', wash: '—',
+};
+export const ITEM_ORDER = ['oil', 'rotate', 'brakes', 'rotors', 'tyrePressure', 'wash', 'airFilter', 'cabinFilter', 'alignment', 'balancing', 'battery', 'batteryNew', 'ac', 'wipers', 'brakeFluid', 'atf', 'coolant', 'waterPump', 'belt', 'plugs', 'shocks', 'arms', 'cvBoots', 'bearings', 'mounts', 'tyres'];
 
 /**
  * What the other sources say, item by item — Toyota's schedule, Saudi service sites and dealers, and owner forums. Shown on
@@ -54,7 +87,12 @@ export const VOICES = {
   plugs: [['Toyota', 'Iridium plugs, about 190,000 km (120,000 miles).'], ['Techs', 'Some change them earlier (~130,000 km) so they don’t seize in the aluminium head.']],
   brakeFluid: [['Toyota (Asia schedule)', 'Replace every 24 months.'], ['Forums', 'Some owners do it yearly in very hot climates.']],
   rotate: [['Toyota', 'Every 8,000 km.'], ['Other Saudi guides', 'Every 10,000 km at the latest.']],
-  tyres: [['Saudi heat', 'Rubber cracks with age: check the sidewalls each summer; most replace by 5–6 years even with tread left.']],
+  tyres: [['Saudi heat', 'Rubber cracks with age: check the sidewalls each summer; most replace by 5–6 years even with tread left.'], ['Tip', 'The 4-digit DOT code on the sidewall is the week and year it was made (2525 = week 25 of 2025). Age counts from there, not from fitting.']],
+  rotors: [['Workshops', 'Measure the disc thickness at every pad change; skim only if it stays above the minimum stamped on the disc.'], ['Tip', 'New pads on worn discs squeal and wear fast — the usual reason both are done together.']],
+  shocks: [['Workshops', 'Commonly replaced around 80,000–100,000 km on Saudi roads; sooner with speed bumps and rough desert roads.'], ['Check', 'Push down hard on each corner: more than one bounce, an oily shock body or a nose-dive under braking means they are done.']],
+  arms: [['Workshops', 'On cars past 8–10 years, the lower arm bushings are a common replacement; the arm usually comes with new bushings and ball joint.'], ['Tip', 'Fit them with the car standing on its wheels (or tighten them there), or the new rubber twists and tears early.']],
+  alignment: [['Tip', 'Ask for the printout before and after: green numbers on both sides.'], ['When', 'After new tyres, shocks or arms — so do it last, after all the suspension work.']],
+  waterPump: [['Known on the 2.5 L', 'Pink crust around the pump pulley is the early sign of a seep; Toyota replaces it under the belt.'], ['Before a trip', 'Top up with the same pink coolant only; carry 1 L of it and water.']],
 };
 /** Where the plan and the notes come from (opened while building this). */
 export const SOURCES = [

@@ -49,7 +49,7 @@ function shopCard() {
 }
 function lifeCard() {
   const s = S(), now = new Date(), bills = L.billsDue(s, now), cars = L.carAlerts(s, now); if (!bills.length && !cars.length) return null;
-  return h('div', { class: 'card' }, h('div', { class: 'row' }, h('div', { class: 'title grow' }, 'Bills and the car'), h('button', { class: 'btn sm ghost', onClick: () => ctx.go('life', bills.length ? 'bills' : 'car') }, 'Open')),
+  return h('div', { class: 'card' }, h('div', { class: 'row' }, h('div', { class: 'title grow' }, 'Bills and the car'), h('button', { class: 'btn sm ghost', onClick: () => bills.length ? ctx.go('life', 'bills') : ctx.go('car') }, 'Open')),
     bills.slice(0, 4).map(b => { const st = L.billState(b, now); return h('div', { class: 'row td-line' }, h('span', {}, b.icon), h('span', { class: 'grow small' }, b.title, b.amount ? h('span', { class: 'tiny dim' }, ` · ${b.amount} SAR`) : null), h('span', { class: `tiny ch-status ${st.cls === 'soon' ? 'due' : st.cls}` }, st.text),
       h('button', { class: 'btn sm', onClick: () => { const before = S(); ctx.update(st2 => L.payBill(st2, b.id, now)); ctx.render(); toast(`${b.title} paid`, 'ok', { action: { label: 'Undo', run: () => ctx.undoTo(before) } }); } }, '✓')); }),
     cars.slice(0, 3).map(a => h('div', { class: 'row td-line' }, h('span', {}, a.icon), h('span', { class: `grow small ${a.days < 0 ? 'late' : ''}` }, L.alertText(a)))));

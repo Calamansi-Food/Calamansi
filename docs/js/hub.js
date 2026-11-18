@@ -51,7 +51,7 @@ export function buildStatus(s, now = new Date(), { plan = null } = {}) {
   for (const a of cars.slice(0, 6)) {
     // care items are due by km too, so their date moves a little each day: the id is pinned to when the item was last done
     const id = a.care ? `care-${a.car.id}-${a.kind}-${a.car.care?.[a.kind]?.last || 'x'}` : `car-${a.car.id}-${a.kind}-${a.date}`;
-    const title = a.care ? `${a.label} for ${a.car.name}${a.kmLeft != null ? (a.kmLeft < 0 ? ` (${(-a.kmLeft).toLocaleString('en')} km over)` : ` (${a.kmLeft.toLocaleString('en')} km left)`) : ''}` : a.kind === 'service' ? `Book a service for ${a.car.name}` : `Renew ${a.label.replace(/ \(.*\)$/, '').toLowerCase()} for ${a.car.name}`;
+    const title = a.care ? `${a.label} for ${a.car.name}${a.kmLeft != null ? (a.kmLeft < 0 ? ` (${(-a.kmLeft).toLocaleString('en')} km over)` : ` (${a.kmLeft.toLocaleString('en')} km left)`) : ''}` : a.driver ? 'Renew your driving licence (Absher)' : a.kind === 'service' ? `Book a service for ${a.car.name}` : `Renew ${a.label.replace(/ \(.*\)$/, '').toLowerCase()} for ${a.car.name}`;
     inbox.push({ id: id.slice(0, 60), type: 'task', title, date: a.date < t ? t : a.date, minutes: a.care ? 30 : a.kind === 'service' ? 15 : 20, pri: a.days <= 7 ? 1 : 2, url: `${SITE_URL}?do=car`, expires: keyOf(addDays(fromKey(a.date < t ? t : a.date), 14)) });
   }
   // time Calamansi wants: the batch cook before a night stretch (Citrus places it around your shifts)

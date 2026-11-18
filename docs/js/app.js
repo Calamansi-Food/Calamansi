@@ -17,11 +17,12 @@ import * as HU from './home-ui.js';
 import * as KU from './kitchen-ui.js';
 import * as SH from './shop-ui.js';
 import * as LU from './life-ui.js';
+import * as CU from './car-ui.js';
 import * as TU from './today-ui.js';
 import { checkBackup, describeCounts } from './backup-check.js';
 import { h, toast, keyOf, fromKey, addDays, startOfDay, fmtDate, pad2, DAY_NAMES, MONTHS, uid } from './util.js';
 
-export const VERSION = '1.1.1';
+export const VERSION = '1.2.0';
 const CITRUS_URL = 'https://amaerys.github.io/citrus-maxima/';
 const MANDARIN_URL = 'https://mandarin-work.github.io/Mandarin/';
 
@@ -67,7 +68,7 @@ async function boot() {
   window.addEventListener('offline', () => { rt.online = false; renderSync(); });
   const sub = { S, update: (fn) => store.update(fn), revert: store.revert, sheet: (c) => sheet(c), render: () => render(), go: (v, p) => go(v, p), busyOf, cheer, undoTo,
     planBlocks, summary: () => HUB.buildStatus(S(), new Date(), { plan: KU.currentPlan() }).summary, quickAdd, hasShifts: () => R.has(), recipeSheet: (r) => KU.recipeSheet(r) };
-  HU.initHome(sub); KU.initKitchen(sub); SH.initShop(sub); LU.initLife(sub); TU.initToday(sub);
+  HU.initHome(sub); KU.initKitchen(sub); SH.initShop(sub); LU.initLife(sub); CU.initCar(sub); TU.initToday(sub);
   store.subscribe(() => { applyTiming(); render(); publishSoon(); });
   store.onRemoteSync(scheduleRemoteSave);
   loadCachedEvents(); R.load(); loadHubCache();
@@ -124,7 +125,7 @@ function quickAdd() {
 }
 
 // Arriving from another app or a link: ?from=citrus shows "← Citrus"; ?do=<action> (or #view) jumps straight there.
-const DO = { today: ['today'], chores: ['home'], home: ['home'], chore: ['home', 'new'], plan: ['kitchen', 'week'], kitchen: ['kitchen', 'week'], recipes: ['kitchen', 'recipes'], recipe: ['kitchen', 'new'], shop: ['shop', 'list'], list: ['shop', 'list'], add: ['shop', 'add'], fridge: ['shop', 'fridge'], bills: ['life', 'bills'], life: ['life', 'bills'], car: ['life', 'car'], anatomy: ['life', 'anatomy'] };
+const DO = { today: ['today'], chores: ['home'], home: ['home'], chore: ['home', 'new'], plan: ['kitchen', 'week'], kitchen: ['kitchen', 'week'], recipes: ['kitchen', 'recipes'], recipe: ['kitchen', 'new'], shop: ['shop', 'list'], list: ['shop', 'list'], add: ['shop', 'add'], fridge: ['shop', 'fridge'], bills: ['life', 'bills'], life: ['life', 'bills'], car: ['car', 'overview'], service: ['car', 'service'], papers: ['car', 'papers'], insurance: ['car', 'papers'], trip: ['car', 'trip'], anatomy: ['car', 'anatomy'] };
 function handleIncoming() {
   try {
     const q = new URLSearchParams(location.search);
@@ -132,9 +133,13 @@ function handleIncoming() {
     if (from === 'citrus') { rt.fromCitrus = true; try { sessionStorage.setItem('calamansi.fromCitrus', '1'); } catch {} }
     else { try { if (sessionStorage.getItem('calamansi.fromCitrus')) rt.fromCitrus = true; } catch {} }   // kept over a reload
     if (from === 'mandarin') rt.fromMandarin = true;
-    const target = DO[action] || DO[location.hash.replace('#', '')] || null;
+    // a setup link: …#setup=<base64url JSON> (the part after # never reaches a server). Read it, then wipe it from the address bar.
+    const sm = /(?:^#|&)setup=([A-Za-z0-9_\-]+)/.exec(location.hash); let setup = null;
+    if (sm) { try { setup = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(sm[1].replace(/-/g, '+').replace(/_/g, '/')), ch => ch.charCodeAt(0)))); } catch { toast('That setup link is damaged', 'err'); } history.replaceState(null, '', location.pathname + (location.search || '') + '#car'); }
+    const target = setup ? DO.car : DO[action] || DO[location.hash.replace('#', '')] || null;
+    if (setup) { rt.handled = true; go('car', 'overview'); setTimeout(() => CU.setupSheet(setup), 400); }
     if (q.toString()) history.replaceState(null, '', location.pathname + (target ? `#${target[0]}` : location.hash || '#today'));
-    if (!target) return;
+    if (!target || setup) return;
     rt.handled = true; go(target[0], target[1]);
     const later = (fn) => setTimeout(fn, 300);
     if (target[0] === 'home' && target[1] === 'new') later(() => HU.editSheet(null));
@@ -156,9 +161,9 @@ function backBar() {
   return h('div', { class: 'back-bar' }, h('a', { class: 'btn sm ghost', href: to[1] }, `← ${to[0]}`), h('button', { class: 'btn sm ghost', 'aria-label': 'Hide', onClick: () => { rt.fromCitrus = rt.fromMandarin = false; try { sessionStorage.removeItem('calamansi.fromCitrus'); } catch {} render(); } }, '✕'));
 }
 
-const VIEWS = ['today', 'home', 'kitchen', 'shop', 'life', 'more'];
-const VIEW_NAMES = { today: 'Today', home: 'Home', kitchen: 'Kitchen', shop: 'Shop', life: 'Life', more: 'Settings' };
-const OLD = { chores: 'home', meals: 'kitchen', recipes: 'kitchen', list: 'shop', fridge: 'shop', bills: 'life', car: 'life', settings: 'more' };
+const VIEWS = ['today', 'home', 'kitchen', 'shop', 'car', 'life', 'more'];
+const VIEW_NAMES = { today: 'Today', home: 'Home', kitchen: 'Kitchen', shop: 'Shop', car: 'Car', life: 'Life', more: 'Settings' };
+const OLD = { chores: 'home', meals: 'kitchen', recipes: 'kitchen', list: 'shop', fridge: 'shop', bills: 'life', settings: 'more' };
 /** Bottom tabs / rail in your order; hidden ones disappear (Settings › Customise). Today and Settings always stay. */
 function applyTabs(c) {
   const nav = document.querySelector('nav.tabs'); if (!nav) return;
@@ -170,7 +175,8 @@ function applyTabs(c) {
 function go(view, part) {
   if (view === 'kitchen' && part) KU.kitchenPart(part === 'new' ? 'recipes' : part);
   if (view === 'shop' && part) SH.shopPart(part === 'add' ? 'list' : part);
-  if (view === 'life' && part) LU.lifePart(part);
+  if (view === 'car' && part) CU.carPart(part);
+  if (view === 'life' && ['car', 'anatomy'].includes(part)) { CU.carPart(part); view = 'car'; }
   show(view);
 }
 function show(view) { document.documentElement.dataset.view = OLD[view] || view;
@@ -185,7 +191,7 @@ function show(view) { document.documentElement.dataset.view = OLD[view] || view;
 }
 function render() {
   applyTabs(CZ.custom(S()));
-  const fn = { today: TU.renderToday, home: HU.renderHome, kitchen: KU.renderKitchen, shop: SH.renderShop, life: LU.renderLife, more: renderMore }[rt.view] || TU.renderToday;
+  const fn = { today: TU.renderToday, home: HU.renderHome, kitchen: KU.renderKitchen, shop: SH.renderShop, life: LU.renderLife, car: CU.renderCar, more: renderMore }[rt.view] || TU.renderToday;
   const el = $(`#view-${rt.view}`); if (!el) return;
   const y = window.scrollY, focus = document.activeElement && el.contains(document.activeElement) && document.activeElement.matches('.dir-search') ? { v: true } : null;
   let body;
@@ -491,7 +497,7 @@ function openSearch() {
   for (const f of K.foodList(s)) all.push({ name: `🧊 ${f.name}`, sub: `in the ${f.where}${f.expires ? ` · best before ${fmtDate(fromKey(f.expires)).slice(0, 5)}` : ''}`, open: () => go('shop', 'fridge') });
   for (const x of K.openShop(s)) all.push({ name: `🛒 ${x.name}`, sub: 'on the shopping list', open: () => go('shop', 'list') });
   for (const b of L.billList(s)) all.push({ name: `${b.icon} ${b.title}`, sub: `${b.kind} · due ${fmtDate(fromKey(b.due))}`, open: () => go('life', 'bills') });
-  for (const c of L.carList(s)) all.push({ name: `${c.icon} ${c.name}`, sub: 'car', open: () => go('life', 'car') });
+  for (const c of L.carList(s)) all.push({ name: `${c.icon} ${c.name}`, sub: 'car', open: () => go('car') });
   let sel = 0, hits = [];
   const list = h('div', { class: 'res' });
   const paint = (q) => {
