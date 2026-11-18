@@ -1277,6 +1277,31 @@ textarea { font: inherit; }
 .eb-row.on { border-color: color-mix(in srgb, var(--sec) 45%, transparent); background: color-mix(in srgb, var(--sec) 10%, var(--card2)); } .eb-row.on .cr-box { background: var(--mint); border-color: var(--mint); color: #062; }
 .pr-list { display: grid; gap: 6px; margin: 10px 0; max-height: 55vh; overflow: auto; } .pr-row { display: flex; align-items: center; gap: 8px; } .pr-row input { width: 86px; } .pr-row select { width: auto; }
 
+/* Nutrition: one view everywhere — cost · kcal · protein · carbs · fat · fibre, always these colours */
+:root { --nu-cost: #c99a06; --nu-kcal: #f97316; --nu-protein: #2f7bf6; --nu-carbs: #e0a106; --nu-fat: #e2557a; --nu-fibre: #16a34a; }
+:root[data-ui="clean"] { --nu-cost: #f5c84b; --nu-kcal: #ff9a52; --nu-protein: #6aa6ff; --nu-carbs: #f7c948; --nu-fat: #ff7aa0; --nu-fibre: #4ade80; }
+.nu-panel { border-radius: 20px; padding: 12px; background: var(--card2); margin: 6px 0 10px; } .nu-panel.tap { cursor: pointer; } .nu-panel.tap:hover { outline: 2px solid color-mix(in srgb, var(--sec) 40%, transparent); }
+.nu-tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+@media (max-width: 430px) { .nu-tiles { grid-template-columns: repeat(3, 1fr); } }
+.nu-t { display: grid; justify-items: center; gap: 1px; padding: 8px 2px 7px; border-radius: 14px; background: var(--card); border-top: 4px solid currentColor; }
+.nu-t b { font-family: var(--display); font-size: 18px; letter-spacing: -.03em; color: var(--text); line-height: 1.1; } .nu-t b small { font-size: 11px; font-family: var(--font); color: var(--muted); }
+.nu-t .nu-ic { font-size: 14px; } .nu-t .nu-l { font-size: 10.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
+.nu-cost { color: var(--nu-cost); } .nu-kcal { color: var(--nu-kcal); } .nu-protein { color: var(--nu-protein); } .nu-carbs { color: var(--nu-carbs); } .nu-fat { color: var(--nu-fat); } .nu-fibre { color: var(--nu-fibre); }
+.nu-bar { display: flex; height: 18px; border-radius: 9px; overflow: hidden; margin: 10px 0 4px; background: var(--card); }
+.nu-bar i { display: grid; place-items: center; font-style: normal; font-size: 10px; font-weight: 800; color: #fff; min-width: 0; }
+.nu-bar i.nu-protein { background: var(--nu-protein); } .nu-bar i.nu-carbs { background: var(--nu-carbs); } .nu-bar i.nu-fat { background: var(--nu-fat); }
+.nu-micros { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 4px 12px; margin-top: 8px; }
+.nu-m { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "l v" "b p"; gap: 1px 6px; font-size: 12px; } .nu-ml { grid-area: l; color: var(--muted); font-weight: 700; } .nu-m b { grid-area: v; font-size: 12px; }
+.nu-mb { grid-area: b; height: 5px; border-radius: 3px; background: var(--card); overflow: hidden; align-self: center; } .nu-mb i { display: block; height: 100%; background: color-mix(in srgb, var(--sec) 70%, var(--text)); } .nu-mb.none { background: none; }
+.nu-mp { grid-area: p; font-size: 10.5px; color: var(--muted); } .nu-m.hi .nu-mb i { background: var(--red); } .nu-m.hi b { color: var(--red); }
+.nu-foot { margin-top: 8px; } .nu-open { color: var(--sec2); font-weight: 700; }
+.nu-strip { display: flex; flex-wrap: wrap; gap: 3px 10px; margin-top: 5px; font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.nu-extras { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12.5px; color: var(--muted); font-weight: 600; margin: -2px 0 10px; }
+.nu-lines { display: grid; gap: 6px; margin: 6px 0 10px; } .nu-li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px; border-radius: 14px; background: var(--card2); }
+.nu-li input { width: 74px; } .nu-li .nu-pick { max-width: 150px; font-size: 12px; } .nu-li.miss { outline: 1.5px dashed color-mix(in srgb, var(--sun) 70%, transparent); } .nu-u { min-width: 26px; }
+.nu-serves { align-items: center; gap: 8px; margin: 4px 0; } .nu-serves b { min-width: 22px; text-align: center; font-family: var(--display); font-size: 18px; }
+.nu-live { margin: -2px 0 10px; }
+
 /* Anatomy */
 .an-card { padding: 12px; }
 .an-wrap { --an-a: color-mix(in srgb, var(--sec) 12%, var(--bg2)); --an-b: color-mix(in srgb, var(--sec) 22%, var(--bg2)); --an-line: color-mix(in srgb, var(--sec) 55%, var(--line2)); }

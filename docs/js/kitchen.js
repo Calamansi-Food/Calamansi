@@ -93,7 +93,7 @@ function cleanMachines(m) {
   return out;
 }
 export function cleanRecipe(r) {
-  const ing = (Array.isArray(r.ingredients) ? r.ingredients : []).map(i => typeof i === 'string' ? parseIngredient(i) : i && typeof i === 'object' ? { item: txt(i.item, 60), qty: num(i.qty, 0, 1e5, 0), unit: unitOf(i.unit), ...(i.cat ? { cat: txt(i.cat, 10) } : {}) } : null).filter(i => i && i.item).slice(0, 40);
+  const ing = (Array.isArray(r.ingredients) ? r.ingredients : []).map(i => typeof i === 'string' ? parseIngredient(i) : i && typeof i === 'object' ? { item: txt(i.item, 60), qty: num(i.qty, 0, 1e5, 0), unit: unitOf(i.unit), ...(i.cat ? { cat: txt(i.cat, 10) } : {}), ...(i.food ? { food: txt(i.food, 30) } : {}) } : null).filter(i => i && i.item).slice(0, 40);
   return {
     id: r.id || 'r' + uid(), title: txt(r.title, LIMITS.title), icon: txt(r.icon, 8) || '🍽️', meal: MEAL_TYPES.some(m => m[0] === r.meal) ? r.meal : 'main',
     mins: num(r.mins, 1, 600, 20), serves: Math.round(num(r.serves, 1, 20, 2)), ingredients: ing, steps: (Array.isArray(r.steps) ? r.steps : String(r.steps || '').split('\n')).map(x => txt(x, 300)).filter(Boolean).slice(0, 30),

@@ -5,9 +5,11 @@ import * as K from './kitchen.js';
 import * as CZ from './custom.js';
 import * as D from './day.js';
 import * as CK from './cook.js';
+import * as NU from './nutri-ui.js';
+import * as N from './nutrition.js';
 
 let ctx = null;
-export function initKitchen(c) {
+export function initKitchen(c) { NU.initNutri(c);
   ctx = c;
   CK.initCook({ owned: () => cfg().kitchen.machines, cooked: (r, { portions, mealId }) => {
     const before = S(), now = new Date(), hr = now.getHours();
@@ -118,7 +120,7 @@ function pickSheet(key, x) {
   const sugg = x.pick ? s.recipes[x.pick.recipeId] : null;
   const box = ctx.sheet([]);
   const save = (m) => { const before = S(); ctx.update(st => K.addMeal(x._replace ? K.deleteMeal(st, x._replace) : st, { date: key, slot: x.slot, ...m })); box.close(); ctx.render(); toast(`${K.slotName(x.slot)} ${relDay(date).toLowerCase()} planned`, 'ok', { action: { label: 'Undo', run: () => ctx.undoTo(before) } }); };
-  const row = (r) => h('button', { class: 'item clickable kt-rrow', onClick: () => save({ recipeId: r.id, servings: x.need === 'pack' ? 1 : r.serves }) }, h('span', { class: 'kt-ic lg' }, r.icon), h('div', { class: 'grow' }, h('div', { class: 'name' }, r.title), h('div', { class: 'meta' }, recipeMeta(r))));
+  const row = (r) => h('button', { class: 'item clickable kt-rrow', onClick: () => save({ recipeId: r.id, servings: x.need === 'pack' ? 1 : r.serves }) }, h('span', { class: 'kt-ic lg' }, r.icon), h('div', { class: 'grow' }, h('div', { class: 'name' }, r.title), h('div', { class: 'meta' }, recipeMeta(r)), NU.strip(r)));
   const txtIn = h('input', { placeholder: 'e.g. Eating out, Leftovers, Hospital canteen', maxlength: 80 });
   box.box.append(h('h2', {}, `${K.slotName(x.slot)} · ${dayTitle(date)}`), x.why ? h('div', { class: 'small muted' }, x.why) : null,
     sugg ? h('div', { class: 'card kt-suggest' }, h('div', { class: 'tiny dim' }, 'Suggested'), row(sugg), x.pick.why?.length ? h('div', { class: 'tiny dim' }, x.pick.why.join(' · ')) : null) : null,
@@ -169,7 +171,7 @@ function recipesView() {
     h('div', { class: 'chips', style: { margin: '8px 0 6px' } }, FILTERS.map(([id, l]) => h('button', { class: `chip ${filter === id ? 'sel' : ''}`, 'aria-pressed': String(filter === id), onClick: () => { filter = id; ctx.render(); } }, l))),
     tags.length ? h('div', { class: 'chips kt-tags', style: { margin: '0 0 12px' } }, tags.map(t => h('button', { class: `chip tag ${tag === t ? 'sel' : ''}`, 'aria-pressed': String(tag === t), onClick: () => { tag = tag === t ? '' : t; ctx.render(); } }, `#${t}`))) : null,
     list.length ? h('div', { class: 'kt-rgrid' }, list.map(r => h('div', { class: `card kt-rcard ${K.cookable(r, own) ? '' : 'cant'}`, role: 'button', tabindex: '0', onClick: () => recipeSheet(r), onKeydown: (e) => { if (e.key === 'Enter') recipeSheet(r); } },
-      h('div', { class: 'row' }, h('span', { class: 'kt-ic lg' }, r.icon), h('div', { class: 'grow' }, h('div', { class: 'name' }, r.title, r.fav ? h('span', { class: 'kt-fav' }, ' ★') : null), h('div', { class: 'tiny dim' }, recipeMeta(r)), valueLine(r))),
+      h('div', { class: 'row' }, h('span', { class: 'kt-ic lg' }, r.icon), h('div', { class: 'grow' }, h('div', { class: 'name' }, r.title, r.fav ? h('span', { class: 'kt-fav' }, ' ★') : null), h('div', { class: 'tiny dim' }, recipeMeta(r)), NU.strip(r))),
       h('div', { class: 'kt-mach' }, Object.keys(r.machines).length ? Object.entries(r.machines).map(([k, m]) => h('span', { class: `chip mchip ${own.includes(k) ? '' : 'no'}` }, `${K.machineIcon(k)} ${K.machineLine(m).split(' · ').slice(0, 2).join(' · ')}`)) : h('span', { class: 'chip mchip' }, '🥄 no cooking')))))
       : h('div', { class: 'card empty' }, q || filter !== 'all' ? 'No recipe matches.' : 'No recipes yet.'),
     missing.length ? h('div', { class: 'card' }, h('div', { class: 'title' }, `Starter recipes you don’t have (${missing.length})`), h('div', { class: 'chips' }, missing.map(r => h('button', { class: 'chip', onClick: () => { ctx.update(st => K.addStarters(st, [r])); ctx.render(); toast(`${r.title} added`, 'ok'); } }, `${r.icon} ${r.title}`)), h('button', { class: 'chip sel', onClick: () => addStarters() }, 'Add all'))) : null];
@@ -183,6 +185,11 @@ function machinesBox(r) {
   const fast = K.usable(r, own)[0]?.[0];
   return h('div', { class: 'kt-machines' }, ent.sort((a, b) => (own.includes(b[0]) - own.includes(a[0])) || (+a[1].mins || 99) - (+b[1].mins || 99)).map(([k, m]) => h('div', { class: `kt-m ${own.includes(k) ? '' : 'no'} ${k === fast ? 'fast' : ''}` },
     h('span', { class: 'kt-mi' }, K.machineIcon(k)), h('b', {}, K.machineName(k)), h('span', { class: 'kt-heat' }, m.temp ? `${m.temp}°C` : m.power || ''), h('span', { class: 'kt-min' }, m.mins ? `${m.mins} min` : ''), m.note ? h('span', { class: 'tiny dim kt-note' }, m.note) : null, own.includes(k) ? null : h('span', { class: 'tiny dim kt-note' }, 'you don’t have one'))));
+}
+/** Under the panel: time, keeping, protein per riyal, prices — the same line on every recipe. */
+function extrasRow(r) {
+  const v = K.valueOf(S(), r);
+  return h('div', { class: 'nu-extras' }, h('span', {}, `⏱ ${r.active ? `${r.active} min hands-on · ${r.mins} in all` : `${r.mins} min`}`), r.keeps ? h('span', {}, `🧊 keeps ${r.keeps} d${r.freezes ? ' · freezes' : ''}`) : null, v.perSar ? h('span', {}, `⚖️ ${v.perSar} g protein per riyal`) : null, h('button', { class: 'btn sm ghost', onClick: () => pricesSheet(r) }, '🏷️ Prices'));
 }
 function valueBox(r) {
   const v = K.valueOf(S(), r); if (!v.cost && !r.fibre && !r.active) return null;
@@ -210,9 +217,11 @@ export function recipeSheet(r, portions = r.serves) {
     note.addEventListener('change', () => { ctx.update(st => K.saveRecipe(st, { ...st.recipes[r.id], note: note.value })); toast('Note saved', 'ok'); });
     body.replaceChildren(h('div', { class: 'rs-hero' }, h('span', { class: 'rs-ic' }, r.icon), h('div', { class: 'grow' }, h('h2', {}, r.title), h('div', { class: 'tiny dim' }, [K.MEAL_TYPES.find(m => m[0] === r.meal)?.[1], `${r.mins} min`, stats.count ? `cooked ${stats.count}×, last ${fmtDate(fromKey(stats.last)).slice(0, 5)}` : 'not cooked yet'].filter(Boolean).join(' · ')))),
       h('div', { class: 'chips', style: { margin: '8px 0 10px' } }, [r.keeps ? `keeps ${r.keeps} day${r.keeps === 1 ? '' : 's'}` : '', r.batch ? 'batch cook' : '', r.freezes ? 'freezes' : '', r.light ? 'light' : '', r.kcal ? `≈ ${r.kcal} kcal` : '', r.protein ? `≈ ${r.protein} g protein` : '', ...r.tags].filter(Boolean).map(t => h('span', { class: 'chip' }, t))),
-      valueBox(r),
+      NU.panel(r, { onOpen: () => { box.close(); NU.nutritionSheet(r, { onSaved: () => { const fresh = S().recipes[r.id]; if (fresh) recipeSheet(fresh, portions); } }); } }),
+      extrasRow(r),
       variantButton(r, () => box.close()),
       h('button', { class: 'btn primary block rs-cook', onClick: () => { box.close(); CK.openCook(r, { servings: portions }); } }, '🍳 Cook it now'),
+      h('button', { class: 'btn block', onClick: () => { box.close(); NU.nutritionSheet(r, { onSaved: () => { const fresh = S().recipes[r.id]; if (fresh) recipeSheet(fresh, portions); } }); } }, '🔬 Nutrition — change amounts, see macros and micros live'),
       machinesBox(r),
       r.ingredients.length ? [h('div', { class: 'row rs-ih' }, h('h3', { class: 'kt-h3 grow' }, 'Ingredients'), h('div', { class: 'rs-por' }, h('button', { class: 'btn sm', 'aria-label': 'Fewer portions', onClick: () => { portions = Math.max(1, portions - 1); paint(); } }, '−'), h('b', {}, `${portions} portion${portions === 1 ? '' : 's'}`), h('button', { class: 'btn sm', 'aria-label': 'More portions', onClick: () => { portions = Math.min(30, portions + 1); paint(); } }, '+'))), h('ul', { class: 'kt-ing' }, ing)] : null,
       r.steps.length ? [h('h3', { class: 'kt-h3' }, 'Steps'), h('ol', { class: 'kt-steps' }, r.steps.map(x => h('li', {}, x)))] : null,
@@ -237,6 +246,7 @@ function planRecipeSheet(r) {
     h('details', { class: 'adv', open: opts.length ? null : '' }, h('summary', { class: 'small' }, 'Another day or slot'), h('div', { class: 'grid2' }, field('Day', dIn), field('Meal', sIn)), h('button', { class: 'btn primary', onClick: () => { if (!dIn.value) return; save({ key: dIn.value, date: fromKey(dIn.value) }, { slot: sIn.value, need: sIn.value === 'night' ? 'pack' : 'main' }); } }, 'Plan it')));
 }
 
+function liveNumbers(c) { const n = N.ofRecipe(c), cost = K.recipeCost(S(), c); return { ...n.per, cost: cost ? cost.perPortion : null, costEstimate: cost?.estimate, split: n.split, share: n.share, source: 'ingredients' }; }
 export function recipeEditor(r, draft = null) {
   const c = cfg(); if (draft) r = { ...draft, id: undefined, _draft: true };
   const t = h('input', { value: r?.title || '', placeholder: 'e.g. Air-fryer chicken thighs', maxlength: K.LIMITS.title }), ic = h('input', { value: r?.icon || '🍽️', style: { width: '70px' }, 'aria-label': 'Icon' });
@@ -250,6 +260,9 @@ export function recipeEditor(r, draft = null) {
   const mach = {}; const mrow = ([k, name, icon]) => { const m = r?.machines?.[k] || {}; const heat = k === 'microwave' ? h('select', { 'aria-label': `${name} power` }, ['', 'High', 'Medium', 'Low', 'Defrost'].map(p => h('option', { value: p, selected: (m.power || '') === p }, p || 'power'))) : h('input', { type: 'number', min: 40, max: 300, value: m.temp || '', inputmode: 'numeric', placeholder: '°C', 'aria-label': `${name} temperature` });
     const mi = h('input', { type: 'number', min: 1, max: 600, value: m.mins || '', inputmode: 'numeric', placeholder: 'min', 'aria-label': `${name} minutes` }), note = h('input', { value: m.note || '', placeholder: 'note (turn halfway…)', maxlength: 80, 'aria-label': `${name} note` });
     mach[k] = { heat, mi, note, micro: k === 'microwave' }; return h('div', { class: `kt-medit ${c.kitchen.machines.includes(k) ? '' : 'no'}` }, h('span', { class: 'kt-mi' }, icon), h('b', {}, name), heat, mi, note); };
+  const livePanel = h('div', { class: 'nu-live' });
+  const paintLive = () => { const v = read(); if (!v.ingredients.length) { livePanel.replaceChildren(h('div', { class: 'tiny dim' }, 'Type the ingredients with amounts and the nutrition appears here as you go.')); return; } const c = K.cleanRecipe({ ...v, title: v.title || 'x' }); livePanel.replaceChildren(NU.panel(c, { live: liveNumbers(c) }), h('div', { class: 'row wrap', style: { gap: '6px', marginTop: '6px' } }, h('button', { class: 'btn sm', onClick: () => { const n = liveNumbers(c); if (n.share < 0.7) return toast('Too few ingredients counted — check the amounts'); kcal.value = Math.round(n.kcal); prot.value = Math.round(n.protein); toast('kcal and protein filled in from the ingredients', 'ok'); } }, '↓ Use these numbers'))); };
+  let liveT = 0; const liveSoon = () => { clearTimeout(liveT); liveT = setTimeout(paintLive, 250); };
   const err = h('div', { class: 'ch-err', role: 'alert' }); let dupOk = false;
   const read = () => ({ ...(r || {}), id: r?.id, title: t.value, icon: ic.value, meal: meal.value, serves: serves.value, mins: mins.value, keeps: keeps.value, kcal: kcal.value, protein: prot.value, batch: batch.checked, freezes: freezes.checked, light: light.checked,
     ingredients: ing.value.split('\n').map(K.parseIngredient).filter(Boolean), steps: steps.value.split('\n'), machines: Object.fromEntries(Object.entries(mach).map(([k, x]) => [k, x.micro ? { power: x.heat.value, mins: x.mi.value, note: x.note.value } : { temp: x.heat.value, mins: x.mi.value, note: x.note.value }])) });
@@ -259,10 +272,11 @@ export function recipeEditor(r, draft = null) {
     if (bad.dup && !dupOk) { err.textContent = `${bad.dup}. Tap again to save anyway.`; dupOk = true; save.textContent = 'Save anyway'; return; }
     ctx.update(s => K.saveRecipe(s, v)); box.close(); ctx.render(); toast(r && !r._draft ? 'Recipe saved' : `${v.title} added`, 'ok'); } }, 'Save');
   t.addEventListener('input', () => { dupOk = false; save.textContent = 'Save'; err.textContent = ''; });
+  ing.addEventListener('input', liveSoon); serves.addEventListener('input', liveSoon); setTimeout(paintLive, 0);
   const box = ctx.sheet([h('h2', {}, r && !r._draft ? 'Edit recipe' : 'New recipe'), h('div', { class: 'ch-name-row' }, field('Icon', ic), field('Name', t)),
     h('div', { class: 'grid3' }, field('Kind', meal), field('Serves', serves), field('Minutes in all', mins)),
     h('div', { class: 'title', style: { marginTop: '6px' } }, 'Machines — time and temperature for each one it can go in'), h('div', { class: 'kt-medits' }, K.MACHINES.map(mrow)),
-    field('Ingredients (one per line: “500 g chicken”)', ing), field('Steps', steps),
+    field('Ingredients (one per line: “500 g chicken”)', ing), livePanel, field('Steps', steps),
     h('div', { class: 'grid3' }, field('Keeps in the fridge (days)', keeps), field('kcal per serving', kcal), field('Protein g per serving', prot)),
     h('div', { class: 'kt-flags' }, batchL, freezesL, lightL), err,
     h('div', { class: 'row wrap sh-foot' }, save, h('button', { class: 'btn ghost', onClick: () => box.close() }, 'Cancel'))]);
@@ -306,7 +320,7 @@ export function eggBatchSheet() {
     const chosen = defs.filter(d => pick.has(d.starter)).map(d => own(d) || K.cleanRecipe({ ...d, id: 'tmp-' + d.starter }));
     const eggs = chosen.reduce((a, r) => a + K.eggsIn(r), 0), trays = Math.ceil(eggs / 30), act = chosen.reduce((a, r) => a + (r.active || r.mins), 0);
     const cost = chosen.reduce((a, r) => a + (K.recipeCost(S(), r)?.total || 0), 0), portions = chosen.reduce((a, r) => a + r.serves, 0), protein = chosen.reduce((a, r) => a + (r.protein || 0) * r.serves, 0);
-    list.replaceChildren(...defs.map(d => { const r = own(d) || K.cleanRecipe({ ...d, id: 'tmp' }); const c = K.recipeCost(S(), r); return h('button', { class: `eb-row ${pick.has(d.starter) ? 'on' : ''}`, 'aria-pressed': String(pick.has(d.starter)), onClick: () => { pick.has(d.starter) ? pick.delete(d.starter) : pick.add(d.starter); paint(); } }, h('span', { class: 'cr-box' }, pick.has(d.starter) ? '✓' : ''), h('span', { class: 'kt-ic' }, d.icon), h('span', { class: 'grow' }, h('b', {}, d.title), h('span', { class: 'tiny dim' }, ` · ${K.eggsIn(r)} eggs · ${r.serves} portions · ${c ? `≈ ${c.perPortion} SAR` : ''} · ${r.fibre} g fibre · keeps ${r.keeps} d${r.freezes ? ', freezes' : ''}`))); }));
+    list.replaceChildren(...defs.map(d => { const r = own(d) || K.cleanRecipe({ ...d, id: 'tmp' }); const c = K.recipeCost(S(), r); return h('button', { class: `eb-row ${pick.has(d.starter) ? 'on' : ''}`, 'aria-pressed': String(pick.has(d.starter)), onClick: () => { pick.has(d.starter) ? pick.delete(d.starter) : pick.add(d.starter); paint(); } }, h('span', { class: 'cr-box' }, pick.has(d.starter) ? '✓' : ''), h('span', { class: 'kt-ic' }, d.icon), h('span', { class: 'grow' }, h('b', {}, d.title), h('span', { class: 'tiny dim' }, ` · ${K.eggsIn(r)} eggs · ${r.serves} portions · keeps ${r.keeps} d${r.freezes ? ', freezes' : ''}`), NU.strip(r))); }));
     out.replaceChildren(h('div', { class: 'lf-stats', style: { margin: '10px 0' } }, st(`${eggs}`, `eggs (${trays} tray${trays === 1 ? '' : 's'} of 30)`), st(`${portions}`, 'portions'), st(`≈ ${Math.round(cost)}`, 'SAR in all'), st(`≈ ${act}`, 'min hands-on'), st(`${Math.round(protein)} g`, 'protein in all')),
       h('div', { class: 'small', style: { margin: '4px 0 8px' } }, 'One session: boil all the eggs in one big pot (10–11 min, iced water) while the oven does the muffins or the bake; split them — some stay in the shell as snacks, some go to the soy marinade, the curry or the salad.'),
       h('div', { class: 'row wrap', style: { gap: '8px' } },

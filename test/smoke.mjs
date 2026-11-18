@@ -70,6 +70,20 @@ for (const [w, hgt, time, ui] of [[390, 844, '2026-11-16T09:30:00+03:00', 'clean
   await tab('kitchen'); await p.click('#view-kitchen .seg button:has-text("Recipes")').catch(() => {}); await sleep(250);
   const eb = await sheetCheck(() => p.click('#view-kitchen button:has-text("Egg batch")'), 'egg batch'); check(/tray/.test(eb) && /SAR in all/.test(eb) && /Breakfast burritos|burritos/i.test(eb), 'the egg batch sheet counts eggs, trays and cost');
   await sheetCheck(() => p.click('#view-kitchen button:has-text("Prices")'), 'prices');
+  // the one nutrition view: on cards, on the recipe, in the interactive sheet and live in the editor
+  check(await p.locator('#view-kitchen .kt-rcard .nu-strip').count() > 3, 'recipe cards carry the nutrition strip');
+  await p.click('#view-kitchen .kt-rcard:has-text("Batch hard-boiled eggs")'); await sleep(400);
+  check(await p.locator('.sheet .nu-panel .nu-t').count() === 6 && /143/.test(await p.locator('.sheet .nu-panel').innerText()), 'the recipe shows the six tiles (143 kcal for 2 eggs)');
+  await p.click('.sheet .nu-panel'); await sleep(450);
+  const before1 = await p.locator('.sheet .nu-kcal b').first().innerText();
+  await p.fill('.sheet .nu-li input >> nth=0', '18'); await sleep(250);
+  const after1 = await p.locator('.sheet .nu-kcal b').first().innerText();
+  check(before1 !== after1 && /215/.test(after1), `changing an amount updates live (${before1} → ${after1})`);
+  await clean(p, '.sheet', 'nutrition sheet'); await p.screenshot({ path: `${shots}/${w}-nutrition.png` });
+  await p.click('.sheet button:has-text("Close")'); await sleep(400); if (await p.locator('.sheet').count()) { await p.click('.sheet button:has-text("Discard")').catch(() => {}); await sleep(300); }
+  await p.click('#view-kitchen button:has-text("New recipe")').catch(() => {}); await sleep(350);
+  if (await p.locator('.sheet textarea').count()) { await p.fill('.sheet textarea >> nth=0', '4 eggs\n100 g feta'); await sleep(450); check(await p.locator('.sheet .nu-live .nu-t').count() === 6, 'the editor shows the panel live while typing'); await p.click('.sheet button:has-text("Cancel")'); await sleep(400); if (await p.locator('.sheet').count()) { await p.click('.sheet button:has-text("Discard")').catch(() => {}); await sleep(300); } }
+
   // Service: by system, with the Arabic workshop names; a planned service and the workshop list; a road trip
   await tab('car', 'Service'); const svc = await clean(p, '#view-car', 'Car › Service'); await p.screenshot({ path: `${shots}/${w}-car-service.png`, fullPage: true });
   check(/Suspension/i.test(svc) && /المساعدات/.test(svc) && /المقصات وجلود المقصات/.test(svc) && /البواجي/.test(svc), 'parts are grouped and named in Arabic too');

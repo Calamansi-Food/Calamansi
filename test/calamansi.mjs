@@ -8,6 +8,7 @@ import * as K from '../docs/js/kitchen.js';
 import * as L from '../docs/js/life.js';
 import * as CC from '../docs/js/carcare.js';
 import * as PO from '../docs/js/policy.js';
+import * as N from '../docs/js/nutrition.js';
 import { POLICY_TEXT } from './policy-sample.mjs';
 import * as HUB from '../docs/js/hub.js';
 import * as MIG from '../docs/js/migrate.js';
@@ -246,5 +247,16 @@ check(K.recipeCost({}, K.cleanRecipe({ title: 'x', serves: 2, ingredients: [{ it
 check(wrap.fibre === 10 && wrap.protein >= 34 && K.recipeCost({}, wrap).perPortion > 7, `the chicken, egg & chickpea wraps: ${wrap.fibre} g fibre, ${wrap.protein} g protein, ≈ ${K.recipeCost({}, wrap).perPortion} SAR`);
 const m2 = mergeStates({ settings: {}, stamps: {} }, K.setPrice({ settings: {}, stamps: { 'set:prices': 5 }, updatedAt: 5 }, 'eggs', 0.55, 'pcs'));
 check(m2.settings.prices && Object.keys(m2.settings.prices).length === 1, 'prices merge as a setting');
+
+console.log('\nnutrition from the ingredients');
+check(N.match('boneless chicken thighs')?.[0] === 'chicken thigh' && N.match('Greek yogurt 0%')?.[0] === 'greek yogurt 0' && N.match('light mayo')?.[0] === 'light mayo' && N.match('wholemeal saj or tortillas')?.[0] === 'wholemeal saj' && !N.match('unobtainium'), 'ingredient names find their food');
+check(N.gramsOf({ qty: 2, unit: 'pcs' }, N.match('eggs')) === 100 && N.gramsOf({ qty: 1, unit: 'tsp' }, N.match('cumin')) === 2 && N.gramsOf({ qty: 1, unit: 'kg' }, N.match('rice')) === 1000, 'pieces, spoons and kg become grams');
+const nb = N.ofRecipe(K.cleanRecipe(K.STARTERS.find(r => r.starter === 'eggs-boil12')));
+check(Math.round(nb.per.kcal) === 143 && Math.round(nb.per.protein * 10) === 126 && nb.share === 1, 'two boiled eggs: 143 kcal, 12.6 g protein');
+const nw = N.ofRecipe(K.cleanRecipe(K.STARTERS.find(r => r.starter === 'egg-chicken-chickpea')));
+check(nw.share === 1 && nw.per.protein > 34 && nw.per.fibre > 8 && nw.per.sodium > 0 && Math.abs(nw.split.protein + nw.split.carbs + nw.split.fat - 1) < 0.01, `the salad wraps from the ingredients: ${Math.round(nw.per.kcal)} kcal, ${Math.round(nw.per.protein)} g P, ${Math.round(nw.per.fibre)} g fibre`);
+const nf = N.ofRecipe(K.cleanRecipe({ title: 'x', serves: 1, ingredients: [{ item: 'mystery paste', qty: 100, unit: 'g', food: 'hummus' }] }));
+check(Math.round(nf.per.kcal) === 166, 'a chosen match counts an unknown ingredient');
+check(N.best(K.cleanRecipe({ title: 'y', serves: 2, kcal: 400, protein: 30, ingredients: [{ item: 'secret', qty: 1, unit: 'pcs' }] })).source === 'recipe', 'too little counted → the recipe’s own figures');
 
 if (bad()) { console.log(`${bad()} check(s) FAILED`); process.exit(1); }
