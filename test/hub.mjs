@@ -102,6 +102,16 @@ check(Object.keys(ea.recipes).length === NS - 1 && Object.keys(eb.recipes).lengt
 const twins = g.tree().filter(l => /(status|state)\.json/.test(l) && !/backups|citrus|mandarin/.test(l));
 check(twins.length === new Set(twins).size, `no duplicate files (${twins.length})`);
 
+// ---- a setup.json left in Calamansi's own folder (by Claude) is proposed, added only on a tap, then binned
+const meDir = g.path(['My Apps', 'hub', 'calamansi'], false);
+g.put('setup.json', meDir, { car: { name: 'Setup Camry', model: 'camry-2016', vin: '1M8GDM9AXKP042788', istimara: '2028-01-02' }, driver: { licence: '2031-01-01' } });
+await A.p.evaluate(() => window.__calamansi.refreshAll(true, { full: true })); await sleep(1500);
+check(/Add your car/.test(await A.p.locator('.sheet').innerText().catch(() => '')), 'a setup.json on Drive is proposed');
+check(!Object.values((await state(A.p)).cars || {}).some(c => c.name === 'Setup Camry'), 'nothing is added before the tap');
+await A.p.click('.sheet button:has-text("Add it")'); await sleep(900);
+check(Object.values((await state(A.p)).cars || {}).some(c => c.name === 'Setup Camry' && c.istimara === '2028-01-02'), 'Add it adds the car');
+check(!g.find('setup.json', meDir), 'and the setup file goes to the bin');
+
 // ---- drive-layout.md: folders found by tag; Citrus moves them and Calamansi follows ----
 const folder = (name, parentParts) => g.find(name, g.path(parentParts, false));
 const own = folder('calamansi', ['My Apps', 'hub']);

@@ -443,6 +443,16 @@ export async function readOtherFile(root, app, name) {
   return data && typeof data === 'object' ? { data, modifiedTime: file.modifiedTime, id: file.id } : null;
 }
 
+/** A setup file left in Calamansi's own folder (setup.json, e.g. by Claude): {data, id}, or null. Never applied here: the app proposes it. */
+export async function readSetupFile(root) {
+  const dir = await appFolder(root, APP, { create: false }); if (!dir) return null;
+  const { file } = await findFile(dir, 'setup.json'); if (!file) return null;
+  const data = await readJsonFile(file);
+  return data && typeof data === 'object' ? { data, id: file.id } : null;
+}
+/** After "Add it": the setup file goes to the bin (Drive keeps it 30 days). */
+export async function binSetupFile(id) { await trash(id); }
+
 // ── Calamansi's own state: read with its revision, written only if nobody else wrote it since
 let seenState = null;   // {id, rev, modifiedTime} of the state.json we last read or wrote
 export async function loadRemoteState(root) {

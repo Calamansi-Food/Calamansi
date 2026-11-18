@@ -1,5 +1,5 @@
 // Calamansi service worker: precached app shell, network-first with a short timeout, Google Fonts cached for offline.
-const CACHE = 'calamansi-6486e32718';
+const CACHE = 'calamansi-7f66582b57';
 const FONTS = 'calamansi-fonts-v1';   // kept across releases: font files are immutable, no need to fetch them again
 const FONT_CSS = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Unbounded:wght@600;700;800&family=Manrope:wght@500;600;700;800&family=Pixelify+Sans:wght@500;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap';
 // Without these the app cannot start offline: install fails (and the old worker stays) if one is missing.

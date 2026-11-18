@@ -353,7 +353,7 @@ function insSheet(c) {
   box.box.classList.add('ch-sheet');
 }
 /** A setup link (…#setup=<base64url JSON>, never sent to a server) proposes a car + papers + policy + licence; Save to keep it. */
-export function setupSheet(o) {
+export function setupSheet(o, { onAdded } = {}) {
   const car = o?.car || {}, dr = o?.driver || null;
   const existing = L.carList(S()).find(x => (car.vin && x.vin === car.vin) || (!car.vin && x.name === car.name));
   const lines = [car.name && `🚗 ${car.name}${car.year ? ` ${car.year}` : ''}${car.colour ? `, ${colourName(car.colour).toLowerCase()}` : ''}`, car.plate && `🔢 Plate ${car.plate}${car.plateLatin ? ` (${car.plateLatin})` : ''}`, car.vin && `🧬 VIN ${car.vin}`,
@@ -364,7 +364,7 @@ export function setupSheet(o) {
     h('div', { class: 'row wrap sh-foot' }, h('button', { class: 'btn primary grow', onClick: () => {
       const before = S();
       ctx.update(st => { let n = st; const base = existing || { ...CC.fromModel(car.model && CC.MODELS[car.model] ? car.model : 'generic') }; n = L.saveCar(n, { ...base, ...car, id: existing?.id, care: { ...(car.care || {}), ...(base.care || {}) }, odoLog: base.odoLog, log: [...(base.log || []), ...(car.log || []).filter(x => !(base.log || []).some(y => y.date === x.date && y.what === x.what))].sort((a, b) => a.date.localeCompare(b.date)), fuel: base.fuel, ins: { ...(base.ins || {}), ...(car.ins || {}) }, plan: base.plan || car.plan, trip: base.trip || car.trip, tyre: base.tyre || car.tyre }); if (dr) n = L.setDriver(n, dr); return n; });
-      box.close(); seg = 'overview'; ctx.render(); toast(existing ? 'Updated' : 'Car added', 'ok', { action: { label: 'Undo', run: () => ctx.undoTo(before) } });
+      box.close(); seg = 'overview'; ctx.render(); onAdded?.(); toast(existing ? 'Updated' : 'Car added', 'ok', { action: { label: 'Undo', run: () => ctx.undoTo(before) } });
     } }, existing ? 'Update' : 'Add it'), h('button', { class: 'btn ghost', onClick: () => box.close() }, 'Not now'))]);
   box.box.classList.add('ch-sheet');
 }

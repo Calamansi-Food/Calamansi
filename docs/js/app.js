@@ -22,7 +22,7 @@ import * as TU from './today-ui.js';
 import { checkBackup, describeCounts } from './backup-check.js';
 import { h, toast, keyOf, fromKey, addDays, startOfDay, fmtDate, pad2, DAY_NAMES, MONTHS, uid } from './util.js';
 
-export const VERSION = '1.2.0';
+export const VERSION = '1.2.1';
 const CITRUS_URL = 'https://amaerys.github.io/citrus-maxima/';
 const MANDARIN_URL = 'https://mandarin-work.github.io/Mandarin/';
 
@@ -298,6 +298,7 @@ async function refreshAll(manual, { full = false } = {}) {
     rt.syncMode = plan.full ? 'full' : plan.state || plan.hub ? 'changes' : 'nothing new';
     // 2. state first (the merge decides what everything else shows), then the rest in parallel
     if (plan.state) await step('state', async () => { await pullState(); rt.stateLoaded = true; });
+    if (plan.full || plan.setup) await step('setup', async () => { const f = await G.readSetupFile(root); if (f && rt.setupSeen !== f.id) { rt.setupSeen = f.id; setTimeout(() => { go('car', 'overview'); CU.setupSheet(f.data, { onAdded: () => G.binSetupFile(f.id).catch(e => console.warn('setup bin', e.message)) }); }, 300); } });
     await Promise.all([
       step('account', async () => { if (!S().google.email) { const u = await G.userInfo(); store.update(s => ({ ...s, google: { ...s.google, email: u.email } }), { remote: false, silent: true }); } }),
       plan.hub || !rt.hub.at ? step('hub', () => syncHub({ full: plan.full })) : null,
@@ -332,6 +333,7 @@ function classifyChanges(changes, w) {
   for (const c of changes) {
     if (roots.has(c.id) && (c.removed || c.trashed || !(c.parents || []).length)) { G.forgetFolders(); return null; }   // one of our folders vanished: rebuild
     const par = c.parents || [];
+    if (par.includes(w.me) && c.name === 'setup.json' && !c.trashed && !c.removed) plan.setup = true;
     if (par.includes(w.me) && c.name === 'state.json' && (c.props?.rev || '') !== G.seenStateRev()) plan.state = true;
     if (w.mandarin && par.includes(w.mandarin) && c.name === 'shifts.json') plan.hub = true;
     if (w.citrus && par.includes(w.citrus) && c.name === 'plan.json') plan.hub = true;
