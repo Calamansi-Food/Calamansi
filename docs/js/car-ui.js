@@ -20,7 +20,7 @@ export function renderCar() {
   const s = S(), now = new Date(), cars = L.carList(s);
   if (!cars.length) return [h('h1', {}, 'Car'),
     h('div', { class: 'card hero lf-carhero empty' }, h('div', { class: 'lf-big' }, '🚗'), h('div', { class: 'title' }, 'Your car, looked after'), h('div', { class: 'small' }, 'Oil, tyres, brakes, suspension, the papers, fuel and road trips — each part due by km or by date, with the Arabic name to tell the workshop.'),
-      h('div', { class: 'row wrap', style: { marginTop: '12px' } }, h('button', { class: 'btn primary', onClick: () => newCar('camry-2016') }, '🚗 Toyota Camry 2016'), h('button', { class: 'btn', onClick: () => newCar('generic') }, 'Another car'), h('button', { class: 'btn', onClick: () => insSheet(null) }, '📄 Start from my insurance policy'))),
+      h('div', { class: 'row wrap', style: { marginTop: '12px' } }, h('button', { class: 'btn primary', onClick: () => newCar('camry-2016') }, '🚗 Toyota Camry 2016'), h('button', { class: 'btn', onClick: () => newCar('generic') }, 'Another car'), h('button', { class: 'btn', onClick: () => insSheet(null) }, '📄 Start from my insurance policy'), h('button', { class: 'btn', onClick: () => ctx.checkSetup?.() }, '📥 Get my car from Drive'))),
     driverCard(now)];
   const c = cars.find(x => x.id === carId) || cars[0];
   const alerts = L.carAlerts(s, now).filter(a => a.car.id === c.id || a.driver).length;

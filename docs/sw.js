@@ -1,5 +1,5 @@
 // Calamansi service worker: precached app shell, network-first with a short timeout, Google Fonts cached for offline.
-const CACHE = 'calamansi-7f66582b57';
+const CACHE = 'calamansi-685b1c9110';
 const FONTS = 'calamansi-fonts-v1';   // kept across releases: font files are immutable, no need to fetch them again
 const FONT_CSS = 'https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Unbounded:wght@600;700;800&family=Manrope:wght@500;600;700;800&family=Pixelify+Sans:wght@500;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap';
 // Without these the app cannot start offline: install fails (and the old worker stays) if one is missing.
@@ -48,7 +48,8 @@ async function fontResponse(req) {
 // Only successful same-origin GETs are cached; only page navigations fall back to the app shell.
 async function shellResponse(e) {
   const req = e.request, cached = () => caches.match(req, { ignoreSearch: true }).then(r => r || (req.mode === 'navigate' ? caches.match('./index.html') : undefined));
-  let saved; const net = fetch(req).then(r => {
+  // cache: 'no-cache' revalidates with the server, so the 10-minute browser cache on GitHub Pages can't serve last release's files
+  let saved; const net = fetch(req, { cache: 'no-cache' }).then(r => {
     if (r.ok && r.type === 'basic') { const copy = r.clone(); saved = caches.open(CACHE).then(c => c.put(req, copy)); }
     return r;
   });

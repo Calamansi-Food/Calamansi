@@ -111,6 +111,16 @@ check(!Object.values((await state(A.p)).cars || {}).some(c => c.name === 'Setup 
 await A.p.click('.sheet button:has-text("Add it")'); await sleep(900);
 check(Object.values((await state(A.p)).cars || {}).some(c => c.name === 'Setup Camry' && c.istimara === '2028-01-02'), 'Add it adds the car');
 check(!g.find('setup.json', meDir), 'and the setup file goes to the bin');
+g.put('setup.json', meDir, { car: { name: 'Second Setup', model: 'generic' } });
+await A.p.evaluate(() => window.__calamansi.checkSetup(true)); await sleep(600);
+check(/Add your car/.test(await A.p.locator('.sheet').innerText().catch(() => '')), 'the Car tab button finds a setup file at once');
+await A.p.click('.sheet button:has-text("Not now")'); await sleep(400);
+await A.p.evaluate(() => window.__calamansi.checkSetup(true)); await sleep(600);
+check(/Add your car/.test(await A.p.locator('.sheet').innerText().catch(() => '')), 'and asks again after "Not now" when asked by hand');
+await A.p.click('.sheet button:has-text("Not now")'); await sleep(400);
+const D = await device('fresh phone after the file was seen'); await sleep(2500);
+check(/Add your car/.test(await D.p.locator('.sheet').innerText().catch(() => '')), 'a fresh app start finds it even when the changes feed already passed it');
+await D.p.click('.sheet button:has-text("Not now")').catch(() => {});
 
 // ---- drive-layout.md: folders found by tag; Citrus moves them and Calamansi follows ----
 const folder = (name, parentParts) => g.find(name, g.path(parentParts, false));

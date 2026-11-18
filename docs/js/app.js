@@ -22,7 +22,7 @@ import * as TU from './today-ui.js';
 import { checkBackup, describeCounts } from './backup-check.js';
 import { h, toast, keyOf, fromKey, addDays, startOfDay, fmtDate, pad2, DAY_NAMES, MONTHS, uid } from './util.js';
 
-export const VERSION = '1.2.1';
+export const VERSION = '1.2.2';
 const CITRUS_URL = 'https://amaerys.github.io/citrus-maxima/';
 const MANDARIN_URL = 'https://mandarin-work.github.io/Mandarin/';
 
@@ -66,7 +66,7 @@ async function boot() {
   });
   window.addEventListener('online', () => { rt.online = true; renderSync(); flushOutbox().then(render).catch(() => {}); });
   window.addEventListener('offline', () => { rt.online = false; renderSync(); });
-  const sub = { S, update: (fn) => store.update(fn), revert: store.revert, sheet: (c) => sheet(c), render: () => render(), go: (v, p) => go(v, p), busyOf, cheer, undoTo,
+  const sub = { S, checkSetup: () => checkSetup(true), update: (fn) => store.update(fn), revert: store.revert, sheet: (c) => sheet(c), render: () => render(), go: (v, p) => go(v, p), busyOf, cheer, undoTo,
     planBlocks, summary: () => HUB.buildStatus(S(), new Date(), { plan: KU.currentPlan() }).summary, quickAdd, hasShifts: () => R.has(), recipeSheet: (r) => KU.recipeSheet(r) };
   HU.initHome(sub); KU.initKitchen(sub); SH.initShop(sub); LU.initLife(sub); CU.initCar(sub); TU.initToday(sub);
   store.subscribe(() => { applyTiming(); render(); publishSoon(); });
@@ -276,6 +276,17 @@ async function syncCalendar(force) {
   await loadEvents(startOfDay(now), addDays(startOfDay(now), 43));
   rt.calendarAt = Date.now();
 }
+/** A setup.json in Calamansi's own Drive folder (left there by Claude) → the "Add your car?" sheet. Checked once per app start,
+ *  on every full pass, when the changes feed shows it, and from the Car tab's button (manual: says what it found). */
+async function checkSetup(manual) {
+  if (manual && !G.isSignedIn()) { toast('Sign in to Google first (Settings)'); return; }
+  let f = null;
+  try { f = await G.readSetupFile(S().settings.driveFolder); } catch (e) { if (manual) toast(`Couldn’t look on Drive: ${e.message}`, 'err'); else throw e; return; }
+  if (!f) { if (manual) toast('No car setup file on Drive right now'); return; }
+  if (!manual && rt.setupSeen === f.id) return;
+  rt.setupSeen = f.id;
+  setTimeout(() => { go('car', 'overview'); CU.setupSheet(f.data, { onAdded: () => G.binSetupFile(f.id).catch(e => console.warn('setup bin', e.message)) }); }, manual ? 0 : 300);
+}
 async function refreshAll(manual, { full = false } = {}) {
   if (!rt.online && manual) { toast('Offline — Calamansi syncs when you are back online'); return; }
   if (!G.isSignedIn()) { if (manual) toast(G.wasSignedIn() ? 'Google needs a tap to reconnect' : S().settings.clientId ? 'Sign in to Google in Settings' : 'Add your Google client ID in Settings'); render(); return; }
@@ -298,7 +309,7 @@ async function refreshAll(manual, { full = false } = {}) {
     rt.syncMode = plan.full ? 'full' : plan.state || plan.hub ? 'changes' : 'nothing new';
     // 2. state first (the merge decides what everything else shows), then the rest in parallel
     if (plan.state) await step('state', async () => { await pullState(); rt.stateLoaded = true; });
-    if (plan.full || plan.setup) await step('setup', async () => { const f = await G.readSetupFile(root); if (f && rt.setupSeen !== f.id) { rt.setupSeen = f.id; setTimeout(() => { go('car', 'overview'); CU.setupSheet(f.data, { onAdded: () => G.binSetupFile(f.id).catch(e => console.warn('setup bin', e.message)) }); }, 300); } });
+    if (plan.full || plan.setup || !rt.setupChecked) await step('setup', async () => { rt.setupChecked = true; await checkSetup(false); });
     await Promise.all([
       step('account', async () => { if (!S().google.email) { const u = await G.userInfo(); store.update(s => ({ ...s, google: { ...s.google, email: u.email } }), { remote: false, silent: true }); } }),
       plan.hub || !rt.hub.at ? step('hub', () => syncHub({ full: plan.full })) : null,
@@ -685,5 +696,5 @@ function toggleRow(label, on, cb) {
   return h('div', { class: 'switch' }, h('span', { class: 'small' }, label), t);
 }
 
-window.__calamansi = { refreshAll, publish, saveStateNow, pullState, store, G, R, rt, VERSION, HUB, K };   // for the console and the tests
+window.__calamansi = { refreshAll, checkSetup, publish, saveStateNow, pullState, store, G, R, rt, VERSION, HUB, K };   // for the console and the tests
 boot();
