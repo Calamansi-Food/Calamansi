@@ -100,8 +100,33 @@ export function cleanRecipe(r) {
     machines: cleanMachines(r.machines), batch: !!r.batch, keeps: Math.round(num(r.keeps, 0, 14, 2)), freezes: !!r.freezes, light: !!r.light,
     kcal: Math.round(num(r.kcal, 0, 3000, 0)), protein: Math.round(num(r.protein, 0, 300, 0)), tags: (Array.isArray(r.tags) ? r.tags : []).map(t => txt(t, 20)).filter(Boolean).slice(0, 8),
     fav: !!r.fav, note: txt(r.note, 400), ...(r.starter ? { starter: txt(r.starter, 20) } : {}), at: r.at || Date.now(),
+    fibre: Math.round(num(r.fibre, 0, 100, 0)), cost: Math.round(num(r.cost, 0, 500, 0) * 10) / 10, active: Math.round(num(r.active, 0, 600, 0)), ...(r.collection ? { collection: txt(r.collection, 20) } : {}),
   };
 }
+// ── what a recipe costs, from ingredient prices (yours in settings.prices, else typical Saudi prices, Nov 2026, marked ≈)
+// A price is SAR per kg (g items), per litre (ml items) or each (pcs). Eggs ≈ 0.60 each (GASTAT/Argaam egg tray ≈ 18 SAR);
+// chicken breast ≈ 46 SAR/kg (GASTAT, 450 g fillet ≈ 20.5–21 SAR). The rest are estimates, there to be corrected.
+export const TYPICAL_PRICES = { eggs: [0.6, 'pcs'], 'chicken breast': [46, 'kg'], 'boneless chicken thighs': [40, 'kg'], 'chickpeas (canned)': [3.5, 'pcs'], 'black beans (canned)': [4.5, 'pcs'],
+  'greek yogurt 0%': [18, 'kg'], 'greek yogurt': [16, 'kg'], 'light mayo': [28, 'kg'], parmesan: [150, 'kg'], feta: [45, 'kg'], cheddar: [50, 'kg'], 'baby spinach': [40, 'kg'],
+  'wholemeal tortillas': [1.25, 'pcs'], 'wholemeal saj or tortillas': [1.25, 'pcs'], onion: [0.4, 'pcs'], 'red pepper': [1.5, 'pcs'], lemon: [0.6, 'pcs'], 'spring onions': [0.5, 'pcs'],
+  'chopped tomatoes (canned)': [3.5, 'pcs'], salsa: [30, 'kg'], 'soy sauce': [20, 'l'], 'basmati rice': [9, 'kg'], 'rolled oats': [12, 'kg'], milk: [6.5, 'l'], cucumber: [0.5, 'pcs'], 'cherry tomatoes': [15, 'kg'], 'little gem or romaine lettuce': [3, 'pcs'], garlic: [0.3, 'pcs'], honey: [60, 'kg'], 'curry powder': [60, 'kg'], 'dijon mustard': [40, 'kg'] };
+const UNIT_TO = { g: ['kg', 0.001], kg: ['kg', 1], ml: ['l', 0.001], l: ['l', 1], pcs: ['pcs', 1], tbsp: ['kg', 0.015], tsp: ['kg', 0.005], cup: ['kg', 0.24] };
+const TP = () => (TP.m ||= Object.fromEntries(Object.entries(TYPICAL_PRICES).map(([k, v]) => [normName(k), v])));
+export function pricesOf(s) { const p = s?.settings?.prices; return p && typeof p === 'object' ? p : {}; }
+export function priceFor(s, item) { const k = normName(item), own = pricesOf(s)[k]; if (own && +own.sar > 0) return { sar: +own.sar, per: own.per, own: true }; const t = TP()[k]; return t ? { sar: t[0], per: t[1], own: false } : null; }
+export const setPrice = (s, item, sar, per) => ({ ...s, settings: { ...(s.settings || {}), prices: { ...pricesOf(s), [normName(item)]: { sar: Math.round(num(sar, 0, 1e5, 0) * 100) / 100, per: ['kg', 'l', 'pcs'].includes(per) ? per : 'pcs' } } } });
+/** {perPortion, total, priced, of, mine, estimate} — computed from prices when most ingredients have one, else the recipe's own ≈ cost. */
+export function recipeCost(s, r) {
+  const ing = r.ingredients.filter(i => i.qty > 0 && !STAPLE.test(i.item));
+  let total = 0, priced = 0, mine = 0;
+  for (const i of ing) { const p = priceFor(s, i.item), u = UNIT_TO[i.unit || 'pcs']; if (!p || !u) continue; const qty = u[0] === p.per ? i.qty * u[1] : p.per === 'pcs' && i.unit === 'pcs' ? i.qty : null; if (qty == null) continue; total += qty * p.sar; priced++; if (p.own) mine++; }
+  const share = ing.length ? priced / ing.length : 0;
+  if (share >= 0.6 && total > 0) { const extra = 1 + (1 - share) * 0.15; /* what has no price is mostly spices and herbs */ const t = total * extra; return { perPortion: Math.round(t / (r.serves || 1) * 10) / 10, total: Math.round(t), priced, of: ing.length, mine, estimate: mine < priced }; }
+  return r.cost ? { perPortion: r.cost, total: Math.round(r.cost * (r.serves || 1)), priced, of: ing.length, mine: 0, estimate: true } : null;
+}
+/** Grams of protein per riyal, and a one-line summary: "≈ 6.5 SAR · 38 g protein · 10 g fibre · 20 min hands-on". */
+export function valueOf(s, r) { const c = recipeCost(s, r); return { cost: c, perSar: c && r.protein ? Math.round(r.protein / c.perPortion * 10) / 10 : null }; }
+export function eggsIn(r, portions = r.serves) { const e = r.ingredients.find(i => /^eggs?$/i.test(i.item.trim()) && (i.unit || 'pcs') === 'pcs'); return e ? Math.ceil(e.qty * portions / (r.serves || 1)) : 0; }
 export function saveRecipe(s, r) { const c = cleanRecipe(r); if (!c.title) return s; return { ...s, recipes: { ...(s.recipes || {}), [c.id]: { ...c, at: Date.now() } } }; }
 export function deleteRecipe(s, id) { const recipes = { ...(s.recipes || {}) }; delete recipes[id]; return { ...s, recipes, deleted: { ...(s.deleted || {}), [`recipe:${id}`]: Date.now() } }; }
 export const recipeList = (s) => rec(s.recipes).sort((a, b) => (b.fav - a.fav) || a.title.localeCompare(b.title));
@@ -289,6 +314,9 @@ function score(s, r, x, { owned, now, recent, used, diet }) {
   if (diet.protein && r.protein) { const t = diet.protein / 3; if (r.protein >= t * .8) { sc += 1; why.push(`${r.protein} g protein`); } }
   if (diet.kcal && r.kcal) { const t = diet.kcal / 3; sc += Math.abs(r.kcal - t) <= t * .25 ? 1 : r.kcal > t * 1.5 ? -1.5 : 0; }
   if (x.need === 'quick') { sc += Math.max(0, (x.max - mins) / 10); if (mins <= 15) why.push(`${mins} min`); }
+  if (r.fibre >= 6) { sc += 0.5; if (why.length < 3) why.push(`${r.fibre} g fibre`); }
+  const v = valueOf(s, r); if (v.perSar >= 4) { sc += 0.5; if (why.length < 3) why.push(`${v.perSar} g protein per riyal`); }
+  if ((x.need === 'packed' || x.packed) && r.keeps >= 3) sc += 0.3;
   if (recent.has(r.id)) sc -= 3;
   sc -= 2 * (used.get(r.id) || 0);
   sc += ((r.id.charCodeAt(r.id.length - 1) + x.at) % 7) / 20;   // a stable tie-break, so equal recipes rotate instead of the first always winning

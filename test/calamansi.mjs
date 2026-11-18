@@ -234,4 +234,17 @@ check(dst.inbox.some(x => /driving licence/i.test(x.title)), 'and reaches the Ci
 const sm = mergeStates(L.setDriver({ settings: {}, stamps: {} }, { licence: '2030-01-01' }), { settings: { driver: { licence: '2029-01-01' } }, stamps: { 'set:driver': 1 }, updatedAt: 1 });
 check(sm.settings.driver?.licence, 'the driver merges as a setting');
 
+console.log('\negg batch, cost and fibre');
+const eggR = K.STARTERS.filter(r => r.collection === 'eggs').map(r => K.cleanRecipe(r));
+check(eggR.length === 8 && eggR.every(r => r.cost > 0 && r.active > 0 && r.keeps >= 3 && r.collection === 'eggs'), `8 egg-batch recipes with cost, hands-on time and keeping time (${eggR.length})`);
+check(eggR.filter(r => /no bread|no tortilla/.test(r.title)).length === 2 && eggR.every(r => !r.variantOf || true), 'two no-bread versions');
+const boil = eggR.find(r => r.starter === 'eggs-boil12'), wrap = eggR.find(r => r.starter === 'egg-chicken-chickpea');
+check(K.recipeCost({}, boil).perPortion === 1.2 && K.eggsIn(boil) === 12 && K.valueOf({}, boil).perSar === 10, 'boiled eggs: 1.2 SAR a portion, 12 eggs, 10 g protein per riyal (typical prices)');
+const myP = K.setPrice({ settings: {} }, 'eggs', 0.5, 'pcs');
+check(K.recipeCost(myP, boil).perPortion === 1 && K.recipeCost(myP, boil).estimate === false && K.priceFor(myP, 'Eggs').own, 'your own egg price wins over the typical one');
+check(K.recipeCost({}, K.cleanRecipe({ title: 'x', serves: 2, ingredients: [{ item: 'unobtainium', qty: 1, unit: 'pcs' }] })) === null, 'no prices and no estimate → no cost shown');
+check(wrap.fibre === 10 && wrap.protein >= 34 && K.recipeCost({}, wrap).perPortion > 7, `the chicken, egg & chickpea wraps: ${wrap.fibre} g fibre, ${wrap.protein} g protein, ≈ ${K.recipeCost({}, wrap).perPortion} SAR`);
+const m2 = mergeStates({ settings: {}, stamps: {} }, K.setPrice({ settings: {}, stamps: { 'set:prices': 5 }, updatedAt: 5 }, 'eggs', 0.55, 'pcs'));
+check(m2.settings.prices && Object.keys(m2.settings.prices).length === 1, 'prices merge as a setting');
+
 if (bad()) { console.log(`${bad()} check(s) FAILED`); process.exit(1); }

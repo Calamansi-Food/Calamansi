@@ -66,6 +66,10 @@ for (const [w, hgt, time, ui] of [[390, 844, '2026-11-16T09:30:00+03:00', 'clean
   await sheetCheck(() => p.click('#view-car .lf-acts button:has-text("Fuel")'), 'fuel sheet');
   check(await p.locator('#view-car .ksa-plate').count() === 1 && await p.locator('#view-car .lf-ring b').count() === 1, 'the hero shows the plate and the health ring');
   const acc = await sheetCheck(() => p.click('#view-car .lf-acts button:has-text("Accident")'), 'accident sheet'); check(/Najm/.test(acc) && /199033/.test(acc) && /1M8GDM9AXKP042788/.test(acc), 'the accident card has Najm, the steps and the VIN');
+  // Kitchen › egg batch, prices, a recipe's value box and its no-bread twin
+  await tab('kitchen'); await p.click('#view-kitchen .seg button:has-text("Recipes")').catch(() => {}); await sleep(250);
+  const eb = await sheetCheck(() => p.click('#view-kitchen button:has-text("Egg batch")'), 'egg batch'); check(/tray/.test(eb) && /SAR in all/.test(eb) && /Breakfast burritos|burritos/i.test(eb), 'the egg batch sheet counts eggs, trays and cost');
+  await sheetCheck(() => p.click('#view-kitchen button:has-text("Prices")'), 'prices');
   // Service: by system, with the Arabic workshop names; a planned service and the workshop list; a road trip
   await tab('car', 'Service'); const svc = await clean(p, '#view-car', 'Car › Service'); await p.screenshot({ path: `${shots}/${w}-car-service.png`, fullPage: true });
   check(/Suspension/i.test(svc) && /المساعدات/.test(svc) && /المقصات وجلود المقصات/.test(svc) && /البواجي/.test(svc), 'parts are grouped and named in Arabic too');

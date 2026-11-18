@@ -1268,6 +1268,15 @@ textarea { font: inherit; }
 .lf-tocar { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; color: var(--text); font: inherit; margin-top: 12px; }
 @media (max-width: 380px) { .cr-tiles { grid-template-columns: repeat(2, 1fr); } }
 
+/* Kitchen 1.3: value line, egg batch, prices */
+.kt-value { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 6px; font-size: 12px; font-weight: 700; color: var(--muted); }
+.kt-value .kt-cost { color: var(--sec2); } :root[data-ui="clean"] .kt-value .kt-cost { color: var(--sec); }
+.rs-value { margin: 4px 0 10px; } .rs-value .lf-stats { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); } .rs-value .lf-stat b { font-size: 18px; }
+.eb-list { display: grid; gap: 6px; margin-top: 10px; }
+.eb-row { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 9px 10px; border-radius: 14px; background: var(--card2); color: var(--text); font: inherit; border: 1px solid transparent; }
+.eb-row.on { border-color: color-mix(in srgb, var(--sec) 45%, transparent); background: color-mix(in srgb, var(--sec) 10%, var(--card2)); } .eb-row.on .cr-box { background: var(--mint); border-color: var(--mint); color: #062; }
+.pr-list { display: grid; gap: 6px; margin: 10px 0; max-height: 55vh; overflow: auto; } .pr-row { display: flex; align-items: center; gap: 8px; } .pr-row input { width: 86px; } .pr-row select { width: auto; }
+
 /* Anatomy */
 .an-card { padding: 12px; }
 .an-wrap { --an-a: color-mix(in srgb, var(--sec) 12%, var(--bg2)); --an-b: color-mix(in srgb, var(--sec) 22%, var(--bg2)); --an-line: color-mix(in srgb, var(--sec) 55%, var(--line2)); }

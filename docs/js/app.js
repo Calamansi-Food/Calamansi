@@ -22,7 +22,7 @@ import * as TU from './today-ui.js';
 import { checkBackup, describeCounts } from './backup-check.js';
 import { h, toast, keyOf, fromKey, addDays, startOfDay, fmtDate, pad2, DAY_NAMES, MONTHS, uid } from './util.js';
 
-export const VERSION = '1.2.2';
+export const VERSION = '1.3.0';
 const CITRUS_URL = 'https://amaerys.github.io/citrus-maxima/';
 const MANDARIN_URL = 'https://mandarin-work.github.io/Mandarin/';
 
@@ -66,7 +66,7 @@ async function boot() {
   });
   window.addEventListener('online', () => { rt.online = true; renderSync(); flushOutbox().then(render).catch(() => {}); });
   window.addEventListener('offline', () => { rt.online = false; renderSync(); });
-  const sub = { S, checkSetup: () => checkSetup(true), update: (fn) => store.update(fn), revert: store.revert, sheet: (c) => sheet(c), render: () => render(), go: (v, p) => go(v, p), busyOf, cheer, undoTo,
+  const sub = { S, checkSetup: () => checkSetup(true), recipesToAdd: (ids) => K.STARTERS.filter(r => ids.includes(r.starter) && !K.recipeList(S()).some(x => x.starter === r.starter)), addRecipes: (st, list) => K.addStarters(st, list), update: (fn) => store.update(fn), revert: store.revert, sheet: (c) => sheet(c), render: () => render(), go: (v, p) => go(v, p), busyOf, cheer, undoTo,
     planBlocks, summary: () => HUB.buildStatus(S(), new Date(), { plan: KU.currentPlan() }).summary, quickAdd, hasShifts: () => R.has(), recipeSheet: (r) => KU.recipeSheet(r) };
   HU.initHome(sub); KU.initKitchen(sub); SH.initShop(sub); LU.initLife(sub); CU.initCar(sub); TU.initToday(sub);
   store.subscribe(() => { applyTiming(); render(); publishSoon(); });
@@ -285,7 +285,7 @@ async function checkSetup(manual) {
   if (!f) { if (manual) toast('No car setup file on Drive right now'); return; }
   if (!manual && rt.setupSeen === f.id) return;
   rt.setupSeen = f.id;
-  setTimeout(() => { go('car', 'overview'); CU.setupSheet(f.data, { onAdded: () => G.binSetupFile(f.id).catch(e => console.warn('setup bin', e.message)) }); }, manual ? 0 : 300);
+  setTimeout(() => { if (f.data?.car) go('car', 'overview'); else go('kitchen', 'recipes'); CU.setupSheet(f.data, { onAdded: () => G.binSetupFile(f.id).catch(e => console.warn('setup bin', e.message)) }); }, manual ? 0 : 300);
 }
 async function refreshAll(manual, { full = false } = {}) {
   if (!rt.online && manual) { toast('Offline — Calamansi syncs when you are back online'); return; }
